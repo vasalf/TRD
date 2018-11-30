@@ -341,14 +341,20 @@ vector<int> get_z(const string& s){
 }
 \end{minted}
 
-\Section{prefix-function\score{TODO}}
+\Section{prefix-function}
 
 \begin{minted}[linenos,frame=single]{c++}
-\end{minted}
-
-\Section{Manacher\score{TODO}}
-
-\begin{minted}[linenos,frame=single]{c++}
+vector<int> get_pi(const string& s){
+    int n = (int)s.length();
+    vector<int> pr(n);
+    for(int i = 1; i < n; i++){
+        int k = pr[i - 1];
+        while(k && s[k] != s[i]) k = pr[k - 1];
+        if(s[k] == s[i]) k++;
+        pr[i] = k;
+    }
+    return pr;
+}
 \end{minted}
 
 \Section{Aho}
@@ -703,7 +709,8 @@ const int N = 1 << LOG;
 int rev[N];
 vec< base > PW[LOG + 1];
 void precalc() {
-    for(int i = 1;i < N;i++) { rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (LOG - 1)); }
+    for(int i = 1;i < N;i++) { 
+        rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (LOG - 1)); }
     for(int lvl = 0;lvl <= LOG;lvl++) {
         int sz = 1 << lvl;
         ld alpha = 2 * pi / sz;
@@ -727,7 +734,7 @@ void fft(base *a, bool invert = 0) {
             for(int j = 0;j < len;j++) {
                 u = a[i + j];
                 v = a[i + j + len] * 
-                    (invert ? PW[lvl + 1][j ? (len << 1) - j : 0] : PW[lvl + 1][j]);
+                    (invert?PW[lvl+1][j?(len << 1)-j:0]:PW[lvl+1][j]);
                 a[i + j] = u + v;
                 a[i + j + len] = u - v;
             }
@@ -783,6 +790,408 @@ vector<Point> convex_hull(vector<Point> v) {
     }
     return ret;
 };
+\end{minted}
+
+\Section{Palindrome-Tree}
+\begin{minted}[linenos,frame=single]{c++}
+struct pal_tree {
+    int sz;
+    vector<unordered_map<int,int>> g;
+    vector<int> len, suf, cn, base;
+    vector<int> fin;
+    int cur, v;
+    pal_tree(): g(2),sz(2),len({-1, 0}),cn({0, 0}),suf({0, 0}),cur(0),v(1){}
+    void add_string (const string &s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s[i] - 'a';
+            while (i - len[v] - 1 < 0 || s[i - len[v] - 1] - 'a' != c)
+                v = suf[v];
+            if (!g[v].count(c)) {
+                g.emplace_back();
+                int t = len[v];
+                len.push_back(t + 2);
+                int u = v;
+                do {
+                    u = suf[u];
+                } while (u && s[i - len[u] - 1] - 'a' != c);
+                suf.push_back(!g[u].count(c) ? 1 : g[u][c]);
+                t = cn[suf.back()];
+                cn.push_back(t + 1);
+                g[v][c] = sz++;
+                cur++;
+            }
+            v = g[v][c];
+            fin.push_back(cn[v]);
+        }
+        return;
+    }
+};
+\end{minted}
+
+\Section{STL TREE}
+
+\begin{minted}[linenos,frame=single]{c++}
+#include <ext/pb_ds/assoc_container.hpp>
+#include <ext/pb_ds/tree_policy.hpp>
+using namespace __gnu_pbds;
+using namespace std;
+typedef
+    tree<
+        pair< int, int >,
+        null_type,
+        less< pair< int, int > >,
+        rb_tree_tag,
+        tree_order_statistics_node_update
+    > stat_set;
+// ...
+ordered_set X;
+    X.insert(1);
+    X.insert(2);
+    X.insert(4);
+    X.insert(8);
+    X.insert(16);
+    cout<<*X.find_by_order(1)<<endl; // 2
+    cout<<*X.find_by_order(2)<<endl; // 4
+    cout<<*X.find_by_order(4)<<endl; // 16
+    cout<<(end(X)==X.find_by_order(6))<<endl; // true
+    cout<<X.order_of_key(-5)<<endl;  // 0
+    cout<<X.order_of_key(1)<<endl;   // 0
+    cout<<X.order_of_key(3)<<endl;   // 2
+    cout<<X.order_of_key(4)<<endl;   // 2
+    cout<<X.order_of_key(400)<<endl; // 5
+\end{minted}
+
+\Section{Dinic}
+
+\begin{minted}[linenos,frame=single]{c++}
+struct Dinic {
+    struct Edge { int fr, to, cp, id, fl; };
+    int n, S, T;
+    vec< Edge > es;
+    vec< vec< int > > g;
+    vec< int > dist, res, ptr;
+    Dinic(int _n, int _S, int _T): 
+        n(_n), S(_S), T(_T) { g.resize(n); }
+    void add_edge(int fr, int to, int cp, int id) {
+        g[fr].push_back((int)es.size());
+        es.push_back({fr, to, cp, id, 0});
+        g[to].push_back((int)es.size());
+        es.push_back({to, fr, 0, -1, 0});
+    }
+    bool bfs(int K) {
+        dist.assign(n, inf);
+        dist[S] = 0;
+        queue< int > q;
+        q.push(S);
+        while(!q.empty()) {
+            int v = q.front();
+            q.pop();
+            for(int ps : g[v]) {
+                Edge &e = es[ps];
+                if(e.fl + K > e.cp) continue;
+                if(dist[e.to] > dist[e.fr] + 1) {
+                    dist[e.to] = dist[e.fr] + 1;
+                    q.push(e.to);
+                }
+            }
+        }
+        return dist[T] < inf;
+    }
+    int dfs(int v, int _push = INT_MAX) {
+        if(v == T || !_push) return _push;
+        for(int &iter = ptr[v];iter < (int)g[v].size();iter++) {
+            int ps = g[v][ ptr[v] ];
+            Edge &e = es[ps];
+            if(dist[e.to] != dist[e.fr] + 1) continue;
+            int tmp = dfs(e.to, min(_push, e.cp - e.fl));
+            if(tmp) {
+                e.fl += tmp;
+                es[ps ^ 1].fl -= tmp;
+                return tmp;
+            }
+        }
+        return 0;
+    }
+    ll find_max_flow() {
+        ptr.resize(n);
+        ll max_flow = 0, add_flow;
+        for(int K = 1 << 30;K > 0;K >>= 1) {
+            while(bfs(K)) {
+                ptr.assign(n, 0);
+                while((add_flow = dfs(S))) {
+                    max_flow += add_flow;
+                }
+            }
+        }
+        return max_flow;
+    }
+    void assign_result() {
+        res.resize(es.size());
+        for(Edge e : es) if(e.id != -1) res[e.id] = e.fl; }
+    int get_flow(int id) { return res[id]; }
+    bool go(int v, vec< int > &F, vec< int > &path) {
+        if(v == T) return 1;
+        for(int ps : g[v]) {
+            if(F[ps] <= 0) continue;
+            if(go(es[ps].to, F, path)) {
+                path.push_back(ps);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    vec< pair< int, vec< int > > > decomposition() {
+        find_max_flow();
+        vec< int > F((int)es.size()), path, add;
+        vec< pair< int, vec< int > > > dcmp;
+        for(int i = 0;i < (int)es.size();i++) F[i] = es[i].fl;
+        while(go(S, F, path)) {
+            int mn = INT_MAX;
+            for(int ps : path) mn = min(mn, F[ps]);
+            for(int ps : path) F[ps] -= mn;
+            for(int ps : path) add.push_back(es[ps].id);
+            reverse(ALL(add));
+            dcmp.push_back({mn, add});
+            add.clear();
+            path.clear();
+        }
+        return dcmp;
+    }
+};
+\end{minted}
+
+\Section{MCMF}
+
+\begin{minted}[linenos,frame=single]{c++}
+struct MCMF {
+    struct Edge { int fr, to, cp, fl, cs, id; };
+    int n, S, T;
+    vec< Edge > es;
+    vec< vec< int > > g;
+    vec< ll > dist, phi;
+    vec< int > from;
+    MCMF(int _n, int _S, int _T): n(_n), S(_S), T(_T)
+    { g.resize(n); }
+    void add_edge(int fr, int to, int cp, int cs, int id) {
+        g[fr].push_back((int)es.size());
+        es.push_back({fr, to, cp, 0, cs, id});
+        g[to].push_back((int)es.size());
+        es.push_back({to, fr, 0, 0, -cs, -1});
+    }
+    void init_phi() {
+        dist.assign(n, LLONG_MAX);
+        dist[S] = 0;
+        for(int any, iter = 0;iter < n - 1;iter++) { // Ford Bellman
+            any = 0;
+            for(Edge e : es) {
+                if(e.fl == e.cp) continue;
+                if(dist[e.to] - dist[e.fr] > e.cs) {
+                    dist[e.to] = dist[e.fr] + e.cs;
+                    any = 1;
+                }
+            }
+            if(!any) break;
+        }
+        phi = dist;
+    }
+    bool Dijkstra() {
+        dist.assign(n, LLONG_MAX);
+        from.assign(n, -1);
+        dist[S] = 0;
+        priority_queue< pair< ll, int >, vec< pair< ll, int > >, greater< pair< ll, int > > > pq;
+        pq.push({dist[S], S});
+        while(!pq.empty()) {
+            int v;
+            ll di;
+            tie(di, v) = pq.top();
+            pq.pop();
+            if(di != dist[v]) continue;
+            for(int ps : g[v]) {
+                Edge &e = es[ps];
+                if(e.fl == e.cp) continue;
+                if(dist[e.to] - dist[e.fr] > e.cs + phi[e.fr] - phi[e.to]) {
+                    dist[e.to] = dist[e.fr] + e.cs + phi[e.fr] - phi[e.to];
+                    from[e.to] = ps;
+                    pq.push({dist[e.to], e.to});
+                }
+            }
+        }
+        for(int v = 0;v < n;v++) {
+            phi[v] += dist[v];
+        }
+        return dist[T] < LLONG_MAX;
+    }
+    pll find_mcmf() {
+        init_phi();
+        ll flow = 0, cost = 0;
+        while(Dijkstra()) {
+            int mn = INT_MAX;
+            for(int v = T;v != S;v = es[ from[v] ].fr) {
+                mn = min(mn, es[from[v]].cp - es[from[v]].fl);
+            }
+            flow += mn;
+            for(int v = T;v != S;v = es[ from[v] ].fr) {
+                es[ from[v] ].fl += mn;
+                es[ from[v] ^ 1 ].fl -= mn;
+            }
+        }
+        for(Edge &e : es) {
+            if(e.fl >= 0)
+                cost += 1ll * e.fl * e.cs;
+        }
+        return make_pair(flow, cost);
+    }
+    bool go(int v, vec< int > &F, vec< int > &path, vec< int > &used) {
+        if(used[v]) return 0;
+        used[v] = 1;
+        if(v == T) return 1;
+        for(int ps : g[v]) {
+            if(F[ps] <= 0) continue;
+            if(go(es[ps].to, F, path, used)) {
+                path.push_back(ps);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    vec< pair< int, vec< int > > > decomposition(ll &_flow, ll &_cost) {
+        tie(_flow, _cost) = find_mcmf();
+        vec< int > F((int)es.size()), path, add, used(n);
+        vec< pair< int, vec< int > > > dcmp;
+        for(int i = 0;i < (int)es.size();i++) F[i] = es[i].fl;
+        while(go(S, F, path, used)) {
+            used.assign(n, 0);
+            int mn = INT_MAX;
+            for(int ps : path) mn = min(mn, F[ps]);
+            for(int ps : path) F[ps] -= mn;
+            for(int ps : path) add.push_back(es[ps].id);
+            reverse(ALL(add));
+            dcmp.push_back({mn, add});
+            add.clear();
+            path.clear();
+        }
+        return dcmp;
+    }
+};
+\end{minted}
+
+\Section{Pollard}
+
+\begin{minted}[linenos,frame=single]{c++}
+namespace FACTORIZE {
+    const ll MAXX = 1000;
+    const int FERMA_ITER = 30;
+    // const int POLLARD_PO_ITER = 10000;
+    int POLLARD_PO_ITER;
+    inline ll sqr(ll n) { return n * n; }
+    ll check_small(ll n) {
+        for(ll x = 1;sqr(x) <= n && x <= MAXX;x++) {
+            if(x > 1 && n % x == 0) {
+                return x;
+            }else if(sqr(x + 1) > n) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+    ll check_square(ll n) {
+        ll bl = 0;
+        ll br = 3e9+1;
+        ll bm;
+        while(br - bl > 1) {
+            bm = (bl + br) / 2;
+            if(sqr(bm) <= n) {
+                bl = bm;
+            }else {
+                br = bm;
+            }
+        }
+        if(sqr(bl) == n && bl > 1) {
+            return bl;
+        }else {
+            return -1;
+        }
+    }
+    inline ll _mul(ll a, ll b, ll m) {
+        static __int128 xa = 1;
+        static __int128 xb = 1;
+        static __int128 xm = 1;
+        xa = a;
+        xb = b;
+        xm = m;
+        return ll(xa * xb % xm);
+    }
+    /*
+    ll _mul(ll x, ll y, ll mod) {
+        ll q = ld(x) * ld(y) / ld(mod);
+        ll r = x * y - q * mod;
+        return (r % mod + mod) % mod;
+    }*/
+    inline ll _binpow(ll x, ll p, ll m) {
+        static ll res = 1;
+        static ll tmp = 1;
+        res = 1;
+        tmp = x;
+        while(p > 0) {
+            if(p & 1ll) {
+                res = _mul(res, tmp, m);
+            }
+            tmp = _mul(tmp, tmp, m);
+            p >>= 1;
+        }
+        return res;
+    }
+    mt19937_64 next_rand(179);
+    ll gcd(ll x, ll y) { return !x ? y : gcd(y % x, x); }
+    bool is_prime(ll n) {
+        if(n <= 1) return false;
+        if(n == 2) return true;
+        ll a, g;
+        for(int iter = 0;iter < FERMA_ITER;iter++) {
+            a = next_rand() % (n - 2);
+            if(a < 0) a += n - 2;
+            a += 2;
+            assert(1 < a && a < n);
+            g = gcd(a, n);
+            if(g != 1) { return false; }
+            if(_binpow(a, n - 1, n) != 1) { return false; }
+        }
+        return true;
+    }
+    inline ll _func(ll x, ll n) {
+        static ll result = 1;
+        result = _mul(x, x, n);
+        return result + 1 < n ? result + 1 : 0;
+    }
+    ll pollard_po(ll n) {
+        POLLARD_PO_ITER = 5 + 3 * pow(n, 0.25);
+        ll a, b, x, g;
+        while(1) {
+            a = next_rand() % n;
+            if(a < 0) a += n;
+            b = next_rand() % n;
+            if(b < 0) b += n;
+            for(int iter = 0;iter < POLLARD_PO_ITER;iter++) {
+                x = a >= b ? a - b : b - a;
+                g = gcd(x, n);
+                if(1 < g && g < n) {
+                    return g;
+                }
+                a = _func(a, n);
+                b = _func(_func(b, n), n);
+            }
+        }
+    }
+    ll get_div(ll n) {
+        ll res;
+        res = check_small(n);
+        if(res != -1) { return res; }
+        res = check_square(n);
+        if(res != -1) { return res; }
+        if(is_prime(n)) { return n; }
+        return pollard_po(n);
+    }
+}
 \end{minted}
 
 \end{document}
