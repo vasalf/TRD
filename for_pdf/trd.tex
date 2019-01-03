@@ -998,7 +998,8 @@ struct MCMF {
         dist.assign(n, LLONG_MAX);
         from.assign(n, -1);
         dist[S] = 0;
-        priority_queue< pair< ll, int >, vec< pair< ll, int > >, greater< pair< ll, int > > > pq;
+        priority_queue< pair< ll, int >, vec< pair< ll, int > >, 
+            greater< pair< ll, int > > > pq;
         pq.push({dist[S], S});
         while(!pq.empty()) {
             int v;
