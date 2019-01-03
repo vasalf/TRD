@@ -828,7 +828,7 @@ struct pal_tree {
 };
 \end{minted}
 
-\Section{STL TREE}
+\Section{STL TREE, HASH\_MAP}
 
 \begin{minted}[linenos,frame=single]{c++}
 #include <ext/pb_ds/assoc_container.hpp>
@@ -859,6 +859,12 @@ ordered_set X;
     cout<<X.order_of_key(3)<<endl;   // 2
     cout<<X.order_of_key(4)<<endl;   // 2
     cout<<X.order_of_key(400)<<endl; // 5
+// ...
+// pbds
+#include <ext/pb_ds/assoc_container.hpp>
+#include <ext/pb_ds/detail/standard_policies.hpp>
+using namespace __gnu_pbds;
+gp_hash_table<int, int> table; // the usage is the same as the unordered_map
 \end{minted}
 
 \Section{Dinic}
