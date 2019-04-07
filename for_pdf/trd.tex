@@ -326,36 +326,79 @@ vector<int> get_lcp(const string& s, const vector<int>& suf){
 }
 \end{minted}
 
-\Section{Z-function}
-
+\Section{Компоненты вершиноой двусвязности}
 \begin{minted}[linenos,frame=single]{c++}
-vector<int> get_z(const string& s){
-    int n = (int)s.length();
-    vector<int> z(n);
-    for(int i = 1, l = 0, r = 0; i < n; i++){
-        if(i < r) z[i] = min(r - i, z[i - l]);
-        while(i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
-        if(i + z[i] > r) l = i, r = i + z[i];
-    }
-    return z;
-}
+struct Edge {
+    int fr, to, id;
+    int get(int v) { return v == fr ? to : fr;}};
+void dfs(const vector<vector<Edge>> &g, vector<int> &fup, vector<int> &tin, 
+    vector<int> &used, int &timer, int v, int par = -1) {
+    tin[v] = fup[v] = timer++; used[v] = 1;
+    for (Edge e : g[v]) {
+        int to = e.get(v);
+        if (to == par) continue;
+        if (used[to]) {fup[v] = min(fup[v], tin[to]);
+        } else { dfs(g, fup, tin, used, timer, to, v);
+            fup[v] = min(fup[v], fup[to]);}}}
+void paintEdges(const vector<vector<Edge>> &g, vector<int> &fup, 
+    vector<int> &tin, vector<int> &used,
+    vector<int> &colors, int v, int curColor, int &maxColor, int par = -1) {
+    used[v] = 1;
+    for (Edge e : g[v]) {
+        int to = e.get(v);
+        if (to == par) continue;
+        if (!used[to]) {
+            if (tin[v] <= fup[to]) { int tmpColor = maxColor++;
+                colors[e.id] = tmpColor;
+                paintEdges(g, fup, tin, used, colors, to, tmpColor, maxColor, v);
+            } else { colors[e.id] = curColor;
+                paintEdges(g, fup, tin, used, colors, to, curColor, maxColor, v);}
+        } else if (tin[to] < tin[v]) { colors[e.id] = curColor;}}}
+vector<vector<Edge>> get2components(const vector<vector<Edge>> &g, 
+    int m, const vector<Edge> &es) {
+    int n = (int)g.size(); vector<int> fup(n), tin(n), used(n); 
+    vector<int> colors(m);
+    int timer; used.assign(n, 0); timer = 0;
+    for (int v = 0; v < n; v++) { if (used[v]) continue;
+        dfs(g, fup, tin, used, timer, v);}
+    used.assign(n, 0);    timer = 0; for (int v = 0; v < n; v++) {
+        if (used[v]) continue;
+        paintEdges(g, fup, tin, used, colors, v, timer, timer, -1); }
+    vector<vector<Edge>> res(timer);
+    for (int i = 0; i < m; i++) { res[colors[i]].push_back(es[i]); }
+    return res;}
 \end{minted}
 
-\Section{prefix-function}
+% \Section{Z-function}
 
-\begin{minted}[linenos,frame=single]{c++}
-vector<int> get_pi(const string& s){
-    int n = (int)s.length();
-    vector<int> pr(n);
-    for(int i = 1; i < n; i++){
-        int k = pr[i - 1];
-        while(k && s[k] != s[i]) k = pr[k - 1];
-        if(s[k] == s[i]) k++;
-        pr[i] = k;
-    }
-    return pr;
-}
-\end{minted}
+% \begin{minted}[linenos,frame=single]{c++}
+% vector<int> get_z(const string& s){
+%     int n = (int)s.length();
+%     vector<int> z(n);
+%     for(int i = 1, l = 0, r = 0; i < n; i++){
+%         if(i < r) z[i] = min(r - i, z[i - l]);
+%         while(i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
+%         if(i + z[i] > r) l = i, r = i + z[i];
+%     }
+%     return z;
+% }
+% \end{minted}
+
+% \Section{prefix-function}
+
+% \begin{minted}[linenos,frame=single]{c++}
+% vector<int> get_pi(const string& s){
+%     int n = (int)s.length();
+%     vector<int> pr(n);
+%     for(int i = 1; i < n; i++){
+%         int k = pr[i - 1];
+%         while(k && s[k] != s[i]) k = pr[k - 1];
+%         if(s[k] == s[i]) k++;
+%         pr[i] = k;
+%     }
+%     return pr;
+% }
+% \end{minted}
 
 \Section{Aho}
 
@@ -459,62 +502,62 @@ vector<int> Hungarian(const vector< vector<int> >& a){ // ALARM: INT everywhere
 }
 \end{minted}
 
-\Section{Hopkroft-Karp}
+% \Section{Hopkroft-Karp}
 
-\begin{minted}[linenos,frame=single]{c++}
-struct HopcroftKarp {
-    int n, m;
-    vec< vec< int > > g;
-    vec< int > pl, pr, dist;
-    HopcroftKarp(): n(0), m(0) { }
-    HopcroftKarp(int _n, int _m): n(_n), m(_m) { g.resize(n); }
-    void add_edge(int u, int v) { g[u].push_back(v); }
-    bool bfs() {
-        dist.assign(n + 1, inf);
-        queue< int > q;
-        for(int u = 0;u < n;u++) {
-            if(pl[u] < m) continue;
-            dist[u] = 0;
-            q.push(u);
-        }
-        while(!q.empty()) {
-            int u = q.front();
-            q.pop();
-            if(dist[u] >= dist[n]) continue;
-            for(int v : g[u]) {
-                if(dist[ pr[v] ] > dist[u] + 1) {
-                    dist[ pr[v] ] = dist[u] + 1;
-                    q.push(pr[v]);
-                }
-            }
-        }
-        return dist[n] < inf;
-    }
-    bool dfs(int v) {
-        if(v == n) return 1;
-        for(int to : g[v]) {
-            if(dist[ pr[to] ] != dist[v] + 1) continue;
-            if(!dfs(pr[to])) continue;
-            pl[v] = to;
-            pr[to] = v;
-            return 1;
-        }
-        return 0;
-    }
-    int find_max_matching() {
-        pl.resize(n, m);
-        pr.resize(m, n);
-        int result = 0;
-        while(bfs()) {
-            for(int u = 0;u < n;u++) {
-                if(pl[u] < m) continue;
-                result += dfs(u);
-            }
-        }
-        return result;
-    }
-};
-\end{minted}
+% \begin{minted}[linenos,frame=single]{c++}
+% struct HopcroftKarp {
+%     int n, m;
+%     vec< vec< int > > g;
+%     vec< int > pl, pr, dist;
+%     HopcroftKarp(): n(0), m(0) { }
+%     HopcroftKarp(int _n, int _m): n(_n), m(_m) { g.resize(n); }
+%     void add_edge(int u, int v) { g[u].push_back(v); }
+%     bool bfs() {
+%         dist.assign(n + 1, inf);
+%         queue< int > q;
+%         for(int u = 0;u < n;u++) {
+%             if(pl[u] < m) continue;
+%             dist[u] = 0;
+%             q.push(u);
+%         }
+%         while(!q.empty()) {
+%             int u = q.front();
+%             q.pop();
+%             if(dist[u] >= dist[n]) continue;
+%             for(int v : g[u]) {
+%                 if(dist[ pr[v] ] > dist[u] + 1) {
+%                     dist[ pr[v] ] = dist[u] + 1;
+%                     q.push(pr[v]);
+%                 }
+%             }
+%         }
+%         return dist[n] < inf;
+%     }
+%     bool dfs(int v) {
+%         if(v == n) return 1;
+%         for(int to : g[v]) {
+%             if(dist[ pr[to] ] != dist[v] + 1) continue;
+%             if(!dfs(pr[to])) continue;
+%             pl[v] = to;
+%             pr[to] = v;
+%             return 1;
+%         }
+%         return 0;
+%     }
+%     int find_max_matching() {
+%         pl.resize(n, m);
+%         pr.resize(m, n);
+%         int result = 0;
+%         while(bfs()) {
+%             for(int u = 0;u < n;u++) {
+%                 if(pl[u] < m) continue;
+%                 result += dfs(u);
+%             }
+%         }
+%         return result;
+%     }
+% };
+% \end{minted}
 
 \Section{CHT}
 
@@ -746,6 +789,70 @@ void fft(base *a, bool invert = 0) {
         }
     }
 }
+\end{minted}
+
+\Section{Extrapolation}
+\begin{minted}[linenos,frame=single]{c++}
+int fact[N];
+int rfact[N];
+
+void precalc2() {
+    fact[0] = 1;
+    for (int i = 1; i < N; i++) {
+        fact[i] = _mul(fact[i - 1], i);
+    }
+    rfact[N - 1] = _rev(fact[N - 1]);
+    for (int i = N - 2; i >= 0; i--) {
+        rfact[i] = _mul(rfact[i + 1], i + 1);
+    }
+}
+
+int getMulOnSegment(int l, int r) {
+    assert(l <= r);
+    if (l == 0 && r == 0) return 1;
+    if (r <= 0) {
+        int res = getMulOnSegment(-r, -l);
+        int cnt = r - l + 1;
+        if (cnt % 2) {
+            res = (-res % mod + mod) % mod;
+        }
+        return res;
+    }
+    if (l < 0) {
+        int resl = getMulOnSegment(0, -l);
+        if (l % 2) {
+            resl = (-resl % mod + mod) % mod;
+        }
+        int resr = getMulOnSegment(0, r);
+        return _mul(resl, resr);
+    }
+    assert(l >= 0);
+    int res = fact[r];
+    if (l > 0) {
+        res = _mul(res, rfact[l - 1]);
+    }
+    return res;
+}
+
+vector<int> extrapolate(vector<int> y, int m) {
+    vector<int> yy = y;
+    int n = (int)y.size() - 1;
+    for (int i = 0; i <= n; i++) {
+        yy[i] = _mul(y[i], _rev(getMulOnSegment(i - n, i - 0)));
+    }
+    vector<int> ff(n + m + 1);
+    for (int i = 1; i <= n + m; i++) {
+        ff[i] = _mul(fact[i - 1], rfact[i]);
+    }
+    vector<int> ss = multiply(yy, ff);
+    for (int i = 1; i <= m; i++) {
+        int cc = getMulOnSegment(i, n + i);
+        int Si = ss[n + i];
+        y.push_back(_mul(cc, Si));
+    }
+    return y;
+}
+
 \end{minted}
 
 \Section{Convex-Hull}
