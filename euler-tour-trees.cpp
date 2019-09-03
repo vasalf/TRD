@@ -38,6 +38,7 @@ private:
         int prior;
         int cnt;
         int rev;
+        
 
         Node():
             l(nullptr), r(nullptr), p(nullptr),

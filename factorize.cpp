@@ -1,4 +1,4 @@
-w// Pollard
+// Pollard
 
 #include <bits/stdc++.h>
 #include "optimization.h"
@@ -195,6 +195,13 @@ namespace FACTORIZE {
         }else {
             return -1;
         }
+    }
+
+    inline ll MUL(ll val, ll n, ll mod) {
+        long long int q=((double)val*(double)n/(double)mod);
+        long long int res=val*n-mod*q;
+        res=(res%mod+mod)%mod;
+        return res;
     }
 
     inline ll _mul(ll a, ll b, ll m) {

@@ -10,7 +10,7 @@ struct Dinic {
     vector< int > dist, res, ptr;
 
     Dinic(int _n, int _S, int _T):
-            n(_n), S(_S), T(_T)
+        n(_n), S(_S), T(_T)
     {
         g.resize(n);
     }
@@ -50,6 +50,7 @@ struct Dinic {
             if(dist[e.to] != dist[e.fr] + 1) continue;
             int tmp = dfs(e.to, min(_push, e.cp - e.fl));
             if(tmp) {
+//                cout << e.fr << " " << e.to << ", ";
                 e.fl += tmp;
                 es[ps ^ 1].fl -= tmp;
                 return tmp;
@@ -63,12 +64,17 @@ struct Dinic {
         ll max_flow = 0, add_flow;
         for(int K = 1 << 30;K > 0;K >>= 1) {
             while(bfs(K)) {
+        //            cout << "HM\n";
                 ptr.assign(n, 0);
                 while((add_flow = dfs(S))) {
                     max_flow += add_flow;
+        //                cout << "\n";
                 }
             }
         }
+//        for(Edge e : es) {
+//            cout << e.fr+1 << " -> " << e.to+1 << " flow = " << e.fl << ", cap = " << e.cp << "\n";
+//        }
         return max_flow;
     }
 
@@ -103,7 +109,7 @@ struct Dinic {
             for(int ps : path) mn = min(mn, F[ps]);
             for(int ps : path) F[ps] -= mn;
             for(int ps : path) add.push_back(es[ps].id);
-            reverse(add.begin(), add.end());
+            reverse(ALL(add));
             dcmp.push_back({mn, add});
             add.clear();
             path.clear();

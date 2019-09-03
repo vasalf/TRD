@@ -176,22 +176,22 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    n = atoi(argv[1]);
+    n = atoi(argv[1]); // n == 8
 
     DELT_ITER = n <= 392 ? 100000 : n == 395 ? 20000 : 50000;
 
     vec< pii > pway = solve();
     
-    // for(pii x : pway) {
-    //     cout << x.first << " " << x.second << "\n";
-    // }
-
-    cout << "start[" << n << "] = {" << pway[0].first << ", " << pway[0].second << "};\n";
-    cout << "howto[" << n << "] = \"";
-    for(int i = 1;i < (int)pway.size();i++) {
-        cout << get_type(pway[i - 1], pway[i]);
+    for(pii x : pway) {
+        cout << x.first << " " << x.second << "\n";
     }
-    cout << "\";\n";
+
+    // cout << "start[" << n << "] = {" << pway[0].first << ", " << pway[0].second << "};\n";
+    // cout << "howto[" << n << "] = \"";
+    // for(int i = 1;i < (int)pway.size();i++) {
+    //     cout << get_type(pway[i - 1], pway[i]);
+    // }
+    // cout << "\";\n";
 
     // cout << "\n";
 
