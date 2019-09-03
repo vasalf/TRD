@@ -7,7 +7,7 @@ ll f(ll T, ll k) {
 }
 
 // A, B, C > 0
-// |{(x, y): x, y > 0 && Ax + Bx <= C}|
+// |{(x, y): x, y > 0 && Ax + By <= C}|
 ll count_triangle(ll A, ll B, ll C) {
     if(A + B > C) return 0;
     if(A > B) swap(A, B);
