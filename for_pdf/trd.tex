@@ -21,10 +21,10 @@
 % \def\CURNO{\NO\t{8}}
 
 \sloppy
-\voffset=-20mm
-\textheight=235mm
-\hoffset=-25mm
-\textwidth=180mm
+\voffset=-27mm
+\textheight=260mm
+\hoffset=-35mm
+\textwidth=208mm
 \headsep=12pt
 \footskip=20pt
 
@@ -126,9 +126,7 @@
 % \tableofcontents
 \pagebreak
 
-\Section{Suffix Tree}
-
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single,fontsize=\footnotesize]{c++}
 // Ukkonen's algorithm O(n)
 const int A = 27; // Alphabet size
 struct SuffixTree {
@@ -206,8 +204,6 @@ struct SuffixTree {
 };
 \end{minted}
 
-\Section{Suffix Array}
-
 \begin{minted}[linenos,frame=single]{c++}
 const int LOG = 21;
 struct SuffixArray {
@@ -269,8 +265,6 @@ struct SuffixArray {
 };
 \end{minted}
 
-\Section{Suffix automaton}
-
 \begin{minted}[linenos,frame=single]{c++}
 struct suf_auto {
     vector<int> base, suf, len;
@@ -308,8 +302,6 @@ struct suf_auto {
 };
 \end{minted}
 
-\Section{Kasai}
-
 \begin{minted}[linenos,frame=single]{c++}
 vector<int> get_lcp(const string& s, const vector<int>& suf){
     int n = (int)suf.size();
@@ -326,7 +318,6 @@ vector<int> get_lcp(const string& s, const vector<int>& suf){
 }
 \end{minted}
 
-\Section{Компоненты вершиноой двусвязности}
 \begin{minted}[linenos,frame=single]{c++}
 struct Edge {
     int fr, to, id;
@@ -369,38 +360,32 @@ vector<vector<Edge>> get2components(const vector<vector<Edge>> &g,
     return res;}
 \end{minted}
 
-% \Section{Z-function}
+\begin{minted}[linenos,frame=single]{c++}
+vector<int> get_z(const string& s){
+    int n = (int)s.length();
+    vector<int> z(n);
+    for(int i = 1, l = 0, r = 0; i < n; i++){
+        if(i < r) z[i] = min(r - i, z[i - l]);
+        while(i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
+        if(i + z[i] > r) l = i, r = i + z[i];
+    }
+    return z;
+}
+\end{minted}
 
-% \begin{minted}[linenos,frame=single]{c++}
-% vector<int> get_z(const string& s){
-%     int n = (int)s.length();
-%     vector<int> z(n);
-%     for(int i = 1, l = 0, r = 0; i < n; i++){
-%         if(i < r) z[i] = min(r - i, z[i - l]);
-%         while(i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
-%         if(i + z[i] > r) l = i, r = i + z[i];
-%     }
-%     return z;
-% }
-% \end{minted}
-
-% \Section{prefix-function}
-
-% \begin{minted}[linenos,frame=single]{c++}
-% vector<int> get_pi(const string& s){
-%     int n = (int)s.length();
-%     vector<int> pr(n);
-%     for(int i = 1; i < n; i++){
-%         int k = pr[i - 1];
-%         while(k && s[k] != s[i]) k = pr[k - 1];
-%         if(s[k] == s[i]) k++;
-%         pr[i] = k;
-%     }
-%     return pr;
-% }
-% \end{minted}
-
-\Section{Aho}
+\begin{minted}[linenos,frame=single]{c++}
+vector<int> get_pi(const string& s){
+    int n = (int)s.length();
+    vector<int> pr(n);
+    for(int i = 1; i < n; i++){
+        int k = pr[i - 1];
+        while(k && s[k] != s[i]) k = pr[k - 1];
+        if(s[k] == s[i]) k++;
+        pr[i] = k;
+    }
+    return pr;
+}
+\end{minted}
 
 \begin{minted}[linenos,frame=single]{c++}
 const int A = 300; // alphabet size
@@ -464,8 +449,6 @@ struct Aho {
 };
 \end{minted}
 
-\Section{Hungarian}
-
 \begin{minted}[linenos,frame=single]{c++}
 vector<int> Hungarian(const vector< vector<int> >& a){ // ALARM: INT everywhere
     int n = (int)a.size();
@@ -502,64 +485,60 @@ vector<int> Hungarian(const vector< vector<int> >& a){ // ALARM: INT everywhere
 }
 \end{minted}
 
-% \Section{Hopkroft-Karp}
-
-% \begin{minted}[linenos,frame=single]{c++}
-% struct HopcroftKarp {
-%     int n, m;
-%     vec< vec< int > > g;
-%     vec< int > pl, pr, dist;
-%     HopcroftKarp(): n(0), m(0) { }
-%     HopcroftKarp(int _n, int _m): n(_n), m(_m) { g.resize(n); }
-%     void add_edge(int u, int v) { g[u].push_back(v); }
-%     bool bfs() {
-%         dist.assign(n + 1, inf);
-%         queue< int > q;
-%         for(int u = 0;u < n;u++) {
-%             if(pl[u] < m) continue;
-%             dist[u] = 0;
-%             q.push(u);
-%         }
-%         while(!q.empty()) {
-%             int u = q.front();
-%             q.pop();
-%             if(dist[u] >= dist[n]) continue;
-%             for(int v : g[u]) {
-%                 if(dist[ pr[v] ] > dist[u] + 1) {
-%                     dist[ pr[v] ] = dist[u] + 1;
-%                     q.push(pr[v]);
-%                 }
-%             }
-%         }
-%         return dist[n] < inf;
-%     }
-%     bool dfs(int v) {
-%         if(v == n) return 1;
-%         for(int to : g[v]) {
-%             if(dist[ pr[to] ] != dist[v] + 1) continue;
-%             if(!dfs(pr[to])) continue;
-%             pl[v] = to;
-%             pr[to] = v;
-%             return 1;
-%         }
-%         return 0;
-%     }
-%     int find_max_matching() {
-%         pl.resize(n, m);
-%         pr.resize(m, n);
-%         int result = 0;
-%         while(bfs()) {
-%             for(int u = 0;u < n;u++) {
-%                 if(pl[u] < m) continue;
-%                 result += dfs(u);
-%             }
-%         }
-%         return result;
-%     }
-% };
-% \end{minted}
-
-\Section{CHT}
+\begin{minted}[linenos,frame=single]{c++}
+struct HopcroftKarp {
+    int n, m;
+    vec< vec< int > > g;
+    vec< int > pl, pr, dist;
+    HopcroftKarp(): n(0), m(0) { }
+    HopcroftKarp(int _n, int _m): n(_n), m(_m) { g.resize(n); }
+    void add_edge(int u, int v) { g[u].push_back(v); }
+    bool bfs() {
+        dist.assign(n + 1, inf);
+        queue< int > q;
+        for(int u = 0;u < n;u++) {
+            if(pl[u] < m) continue;
+            dist[u] = 0;
+            q.push(u);
+        }
+        while(!q.empty()) {
+            int u = q.front();
+            q.pop();
+            if(dist[u] >= dist[n]) continue;
+            for(int v : g[u]) {
+                if(dist[ pr[v] ] > dist[u] + 1) {
+                    dist[ pr[v] ] = dist[u] + 1;
+                    q.push(pr[v]);
+                }
+            }
+        }
+        return dist[n] < inf;
+    }
+    bool dfs(int v) {
+        if(v == n) return 1;
+        for(int to : g[v]) {
+            if(dist[ pr[to] ] != dist[v] + 1) continue;
+            if(!dfs(pr[to])) continue;
+            pl[v] = to;
+            pr[to] = v;
+            return 1;
+        }
+        return 0;
+    }
+    int find_max_matching() {
+        pl.resize(n, m);
+        pr.resize(m, n);
+        int result = 0;
+        while(bfs()) {
+            for(int u = 0;u < n;u++) {
+                if(pl[u] < m) continue;
+                result += dfs(u);
+            }
+        }
+        return result;
+    }
+};
+\end{minted}
 
 \begin{minted}[linenos,frame=single]{c++}
 struct Line {
@@ -637,8 +616,6 @@ struct CHT {
 };
 \end{minted}
 
-\Section{FFT with prime mod}
-
 \begin{minted}[linenos,frame=single]{c++}
 const int mod = 998244353;
 const int root = 31;
@@ -711,8 +688,6 @@ vec< int > multiply(const vec< int > &a, const vec< int > &b) {
     return fa;
 }
 \end{minted}
-
-\Section{FFT with ld}
 
 \begin{minted}[linenos,frame=single]{c++}
 struct Complex {
@@ -791,7 +766,6 @@ void fft(base *a, bool invert = 0) {
 }
 \end{minted}
 
-\Section{Extrapolation}
 \begin{minted}[linenos,frame=single]{c++}
 int fact[N];
 int rfact[N];
@@ -855,51 +829,49 @@ vector<int> extrapolate(vector<int> y, int m) {
 
 \end{minted}
 
-\Section{Convex-Hull}
-\begin{minted}[linenos,frame=single]{c++}
-struct Point {
-    ll x, y;
-    Point(){}
-    Point(ll x, ll y): x(x), y(y) {}
-    bool operator <(const Point &a) const { 
-        return make_pair(x, y) < make_pair(a.x, a.y); }
-    Point operator +(const Point &a) const { return {x + a.x, y + a.y}; }
-    Point operator -(const Point &a) const { return {x - a.x, y - a.y}; }
-    ll cross_product(const Point &a) const { return x * a.y - y * a.x; }
-    ll len2() const { return x * x + y * y; }
-};
-vector<Point> convex_hull(vector<Point> v) {
-    Point O = v[0];
-    int pos = 0;
-    for (int i = 0; i < v.size(); i++) {
-        if (v[i] < O)
-            tie(pos, O) = {i, v[i]};
-    }
-    swap(v[0], v[pos]);
-    v = {v.begin() + 1, v.end()};
-    sort(v.begin(), v.end(), [&O](const Point &a, const Point &b){
-        ll prod = (a - O).cross_product(b - O);
-        if (prod)
-            return prod > 0;
-        return (a - O).len2() < (b - O).len2();
-    });
-    vector<Point> ret{O};
-    for (Point &p : v) {
-        while (ret.size() > 1) {
-            Point fr = p - ret[ret.size() - 2], 
-                sc = ret[ret.size() - 1] - ret[ret.size() - 2];
-            ll prod = sc.cross_product(fr);
-            if (prod > 0)
-                break;
-            ret.pop_back();
-        }
-        ret.push_back(p);
-    }
-    return ret;
-};
-\end{minted}
+% \begin{minted}[linenos,frame=single]{c++}
+% struct Point {
+%     ll x, y;
+%     Point(){}
+%     Point(ll x, ll y): x(x), y(y) {}
+%     bool operator <(const Point &a) const { 
+%         return make_pair(x, y) < make_pair(a.x, a.y); }
+%     Point operator +(const Point &a) const { return {x + a.x, y + a.y}; }
+%     Point operator -(const Point &a) const { return {x - a.x, y - a.y}; }
+%     ll cross_product(const Point &a) const { return x * a.y - y * a.x; }
+%     ll len2() const { return x * x + y * y; }
+% };
+% vector<Point> convex_hull(vector<Point> v) {
+%     Point O = v[0];
+%     int pos = 0;
+%     for (int i = 0; i < v.size(); i++) {
+%         if (v[i] < O)
+%             tie(pos, O) = {i, v[i]};
+%     }
+%     swap(v[0], v[pos]);
+%     v = {v.begin() + 1, v.end()};
+%     sort(v.begin(), v.end(), [&O](const Point &a, const Point &b){
+%         ll prod = (a - O).cross_product(b - O);
+%         if (prod)
+%             return prod > 0;
+%         return (a - O).len2() < (b - O).len2();
+%     });
+%     vector<Point> ret{O};
+%     for (Point &p : v) {
+%         while (ret.size() > 1) {
+%             Point fr = p - ret[ret.size() - 2], 
+%                 sc = ret[ret.size() - 1] - ret[ret.size() - 2];
+%             ll prod = sc.cross_product(fr);
+%             if (prod > 0)
+%                 break;
+%             ret.pop_back();
+%         }
+%         ret.push_back(p);
+%     }
+%     return ret;
+% };
+% \end{minted}
 
-\Section{Palindrome-Tree}
 \begin{minted}[linenos,frame=single]{c++}
 struct pal_tree {
     int sz;
@@ -934,8 +906,6 @@ struct pal_tree {
     }
 };
 \end{minted}
-
-\Section{STL TREE, HASH\_MAP}
 
 \begin{minted}[linenos,frame=single]{c++}
 #include <ext/pb_ds/assoc_container.hpp>
@@ -973,8 +943,6 @@ ordered_set X;
 using namespace __gnu_pbds;
 gp_hash_table<int, int> table; // the usage is the same as the unordered_map
 \end{minted}
-
-\Section{Dinic}
 
 \begin{minted}[linenos,frame=single]{c++}
 struct Dinic {
@@ -1072,8 +1040,6 @@ struct Dinic {
     }
 };
 \end{minted}
-
-\Section{MCMF}
 
 \begin{minted}[linenos,frame=single]{c++}
 struct MCMF {
@@ -1188,8 +1154,6 @@ struct MCMF {
     }
 };
 \end{minted}
-
-\Section{Pollard}
 
 \begin{minted}[linenos,frame=single]{c++}
 namespace FACTORIZE {
@@ -1307,8 +1271,6 @@ namespace FACTORIZE {
     }
 }
 \end{minted}
-
-\Section{Euler Tour Tree}
 
 \begin{minted}[linenos,frame=single]{c++}
 class EulerTourTrees {
