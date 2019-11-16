@@ -360,31 +360,36 @@ vector<vector<Edge>> get2components(const vector<vector<Edge>> &g,
     return res;}
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
-vector<int> get_z(const string& s){
-    int n = (int)s.length();
-    vector<int> z(n);
-    for(int i = 1, l = 0, r = 0; i < n; i++){
-        if(i < r) z[i] = min(r - i, z[i - l]);
-        while(i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
-        if(i + z[i] > r) l = i, r = i + z[i];
-    }
-    return z;
-}
+\begin{minted}[frame=single]{c++}
+vector<int> get_z(const string& s) {
+    int n = (int) s.size(); vector<int> z(n);
+    for (int l = 0, r = -1, i = 1; i < n; i++) {
+        z[i] = i <= r ? min(r - i, z[i - l]) : 0;
+        while (i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
+        if (i + z[i] > r) l = i, r = i + z[i];} return z;}
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
-vector<int> get_pi(const string& s){
-    int n = (int)s.length();
-    vector<int> pr(n);
-    for(int i = 1; i < n; i++){
-        int k = pr[i - 1];
-        while(k && s[k] != s[i]) k = pr[k - 1];
-        if(s[k] == s[i]) k++;
-        pr[i] = k;
-    }
-    return pr;
-}
+\begin{minted}[frame=single]{c++}
+vector<int> get_pi(const string& s) {
+    int n = (int) s.size(); vector<int> p(n);
+    for (int j, i = 1; i < n; i++) {
+        for (j = p[i - 1]; j > 0 && s[i] != s[j]; j = p[j - 1]);
+        p[i] = (j += (s[i] == s[j]));} return p;}
+\end{minted}
+
+\begin{minted}[frame=single]{c++}
+pair<vector<int>, vector<int>> manacker(const string& s) { // -> {d0, d1}. RUN test!
+    int n = (int) s.size();
+    vector<int> d0(n), d1(n);
+    for (int l = 0, r = -1, i = 0; i < n; i++) { // d1
+        d1[i] = i <= r ? min(r - i, d1[l + r - i]) : 0;
+        while (i >= d1[i] && i + d1[i] < n && s[i - d1[i]] == s[i + d1[i]]) d1[i]++;
+        d1[i]--; if (i + d1[i] > r) l = i - d1[i], r = i + d1[i];}
+    for (int l = 0, r = -1, i = 0; i < n; i++) {
+        d0[i] = i < r ? min(r - i, d0[l + r - i - 1]) : 0;
+        while (i >= d0[i] && i + d0[i] + 1 < n && s[i - d0[i]] == s[i + d0[i] + 1]) d0[i]++;
+        if (d0[i] > 0 && i + d0[i] > r) l = i - d0[i] + 1, r = i + d0[i];}
+    return {d0, d1};}
 \end{minted}
 
 \begin{minted}[linenos,frame=single]{c++}
@@ -1342,5 +1347,77 @@ private:int n = 0;vec< set< Node* > > ptr;
     vec< unordered_map< int, Node* > > where_edge; // ptr to node
 };
 \end{minted}
+
+\begin{minted}[frame=single]{c++}
+struct Edge {
+    int fr, to, w, id;
+    bool operator < (const Edge& o) const { return w < o.w; }
+};
+
+// find oriented mst (tree)
+// there are no edge --> root (root is 0)
+// 0 .. n - 1, weights and vertices will be changed, but ids are ok
+vector<Edge> work(const vector<vector<Edge>>& graph) {
+    int n = (int) graph.size();
+    vector<int> color(n), used(n, -1);
+    for (int i = 0; i < n; i++)
+        color[i] = i;
+    vector<Edge> e(n);
+    for (int i = 0; i < n; i++) {
+        if (graph[i].empty()) {
+            e[i] = {-1, -1, -1, -1};
+        } else {
+            e[i] = *min_element(graph[i].begin(), graph[i].end());
+        }
+    }
+    vector<vector<int>> cycles;
+    used[0] = -2;
+    for (int s = 0; s < n; s++) {
+        if (used[s] != -1)
+            continue;
+        int x = s;
+        while (used[x] == -1) {
+            used[x] = s;
+            x = e[x].fr;
+        }
+        if (used[x] != s)
+            continue;
+        vector<int> cycle = {x};
+        for (int y = e[x].fr; y != x; y = e[y].fr)
+            cycle.push_back(y), color[y] = x;
+        cycles.push_back(cycle);
+    }
+    if (cycles.empty())
+        return e;
+    vector<vector<Edge>> next_graph(n);
+    for (int s = 0; s < n; s++) {
+        for (const Edge& edge : graph[s]) {
+            if (color[edge.fr] != color[s])
+                next_graph[color[s]].push_back({
+                    color[edge.fr], color[s], edge.w - e[s].w, edge.id
+                });
+        }
+    }
+    vector<Edge> tree = work(next_graph);
+    for (const auto& cycle : cycles) {
+        int cl = color[cycle[0]];
+        Edge next_out = tree[cl], out{};
+        int from = -1;
+        for (int v : cycle) {
+            tree[v] = e[v];
+            for (const Edge& edge : graph[v])
+                if (edge.id == next_out.id)
+                    from = v, out = edge;
+        }
+        tree[from] = out;
+    }
+    return tree;
+}
+\end{minted}
+
+{\bf Gomory-Hu tree (Gusfield’s algorithm)}: label nodes from $0$ to ($|V| - 1$) and 
+set $p_i=0 \forall i > 0$. $\forall\,i > 0$: find min-cut $(S, T)$ 
+between $i$ and $p_i$, where $i \in S, p_i \in T$; 
+for each node $j$, s.t. $i < j, j \in S, p_j=p_i$ set $p_j = i$
 
 \end{document}
