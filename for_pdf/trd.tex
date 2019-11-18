@@ -204,68 +204,46 @@ struct SuffixTree {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 const int LOG = 21;
 struct SuffixArray {
-    string s;
-    int n;
-    vec< int > p;
-    vec< int > c[LOG];
-    SuffixArray(): n(0) { }
-    SuffixArray(string ss): s(ss) {
+    vector< int > p, c[LOG];
+    SuffixArray() = default;
+    SuffixArray(string s) {
         s.push_back(0);
-        n = (int)s.size();
-        vec< int > pn, cn;
-        vec< int > cnt;
+        int n = (int)s.size();
+        vector<int> pn, cn, cnt;
         p.resize(n);
         for(int i = 0;i < LOG;i++) c[i].resize(n);
-        pn.resize(n);
-        cn.resize(n);
-        cnt.assign(300, 0);
-        for(int i = 0;i < n;i++) cnt[s[i]]++;
-        for(int i = 1;i < (int)cnt.size();i++) cnt[i] += cnt[i - 1];
-        for(int i = n - 1;i >= 0;i--) p[--cnt[s[i]]] = i;
-        for(int i = 1;i < n;i++) {
+        pn.resize(n), cn.resize(n), cnt.assign(300, 0);
+        for (int i = 0; i < n; i++) cnt[s[i]]++;
+        for (int i = 1; i < (int) cnt.size(); i++) cnt[i] += cnt[i - 1];
+        for (int i = n - 1; i >= 0; i--) p[--cnt[s[i]]] = i;
+        for (int i = 1; i < n; i++) {
             c[0][p[i]] = c[0][p[i - 1]];
-            if(s[p[i]] != s[p[i - 1]]) c[0][p[i]]++;
-        }
-        for(int lg = 0, k = 1;k < n;k <<= 1, lg++) {
-            for(int i = 0;i < n;i++) {
+            if(s[p[i]] != s[p[i - 1]]) c[0][p[i]]++;}
+        for (int lg = 0, k = 1; k < n; k <<= 1, lg++) {
+            for (int i = 0; i < n; i++)
                 if((pn[i] = p[i] - k) < 0) pn[i] += n;
-            }
             cnt.assign(n, 0);
-            for(int i = 0;i < n;i++) cnt[c[lg][pn[i]]]++;
-            for(int i = 1;i < (int)cnt.size();i++) cnt[i] += cnt[i - 1];
-            for(int i = n - 1;i >= 0;i--) p[--cnt[c[lg][pn[i]]]] = pn[i];
-            for(int l1, r1, l2, r2, i = 1;i < n;i++) {
+            for (int i = 0; i < n; i++) cnt[c[lg][pn[i]]]++;
+            for (int i = 1; i < (int) cnt.size(); i++) cnt[i] += cnt[i - 1];
+            for (int i = n - 1; i >= 0; i--) p[--cnt[c[lg][pn[i]]]] = pn[i];
+            for (int l1, r1, l2, r2, i = 1; i < n; i++) {
                 cn[p[i]] = cn[p[i - 1]];
-                l1 = p[i - 1];
-                l2 = p[i];
-                if((r1 = l1 + k) >= n) r1 -= n;
-                if((r2 = l2 + k) >= n) r2 -= n;
-                if(c[lg][l1] != c[lg][l2] || c[lg][r1] != c[lg][r2]) cn[p[i]]++;
-            }
+                l1 = p[i - 1], r1 = (l1 + k) % n;
+                l2 = p[i], r2 = (l2 + k) % n;
+                if(c[lg][l1] != c[lg][l2] || c[lg][r1] != c[lg][r2]) cn[p[i]]++;}
             c[lg + 1] = cn;
-        }
-        p.erase(p.begin(), p.begin() + 1);
-        n--;
-    }
+        }p.erase(p.begin(), p.begin() + 1);}
     int get_lcp(int i, int j) {
-        int res = 0;
-        for(int lg = LOG - 1;lg >= 0;lg--) {
-            if(i + (1 << lg) > n || j + (1 << lg) > n) continue;
-            if(c[lg][i] == c[lg][j]) {
-                i += (1 << lg);
-                j += (1 << lg);
-                res += (1 << lg);
-            }
-        }
-        return res;
-    }
-};
+        int res = 0; for (int lg = LOG - 1; lg >= 0; lg--) {
+            if (i + (1 << lg) > (int) p.size() || j + (1 << lg) > (int) p.size()) continue;
+            if (c[lg][i] == c[lg][j])
+                i += (1 << lg), j += (1 << lg), res += (1 << lg);}return res;}};
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct suf_auto {
     vector<int> base, suf, len;
     vector<vector<int>> g;
@@ -302,7 +280,7 @@ struct suf_auto {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 vector<int> get_lcp(const string& s, const vector<int>& suf){
     int n = (int)suf.size();
     vector<int> back(n);
@@ -318,7 +296,7 @@ vector<int> get_lcp(const string& s, const vector<int>& suf){
 }
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct Edge {
     int fr, to, id;
     int get(int v) { return v == fr ? to : fr;}};
@@ -392,7 +370,7 @@ pair<vector<int>, vector<int>> manacker(const string& s) { // -> {d0, d1}. RUN t
     return {d0, d1};}
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 const int A = 300; // alphabet size
 struct Aho {
     struct Node {
@@ -454,7 +432,7 @@ struct Aho {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 vector<int> Hungarian(const vector< vector<int> >& a){ // ALARM: INT everywhere
     int n = (int)a.size();
     vector<int> row(n), col(n), pair(n, -1), back(n, -1), prev(n, -1);
@@ -490,7 +468,7 @@ vector<int> Hungarian(const vector< vector<int> >& a){ // ALARM: INT everywhere
 }
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct HopcroftKarp {
     int n, m;
     vec< vec< int > > g;
@@ -545,7 +523,7 @@ struct HopcroftKarp {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct Line {
     ll k, b;
     int type;
@@ -621,7 +599,7 @@ struct CHT {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 const int mod = 998244353;
 const int root = 31;
 const int LOG = 23;
@@ -694,7 +672,7 @@ vec< int > multiply(const vec< int > &a, const vec< int > &b) {
 }
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct Complex {
     ld rl = 0, im = 0;
     Complex() = default;
@@ -771,7 +749,7 @@ void fft(base *a, bool invert = 0) {
 }
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 int fact[N];
 int rfact[N];
 
@@ -834,7 +812,7 @@ vector<int> extrapolate(vector<int> y, int m) {
 
 \end{minted}
 
-% \begin{minted}[linenos,frame=single]{c++}
+% \begin{minted}[frame=single]{c++}
 % struct Point {
 %     ll x, y;
 %     Point(){}
@@ -877,7 +855,7 @@ vector<int> extrapolate(vector<int> y, int m) {
 % };
 % \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct pal_tree {
     int sz;
     vector<unordered_map<int,int>> g;
@@ -912,7 +890,7 @@ struct pal_tree {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 #include <ext/pb_ds/assoc_container.hpp>
 #include <ext/pb_ds/tree_policy.hpp>
 using namespace __gnu_pbds;
@@ -949,7 +927,7 @@ using namespace __gnu_pbds;
 gp_hash_table<int, int> table; // the usage is the same as the unordered_map
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct Dinic {
     struct Edge { int fr, to, cp, id, fl; };
     int n, S, T;
@@ -1046,7 +1024,7 @@ struct Dinic {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 struct MCMF {
     struct Edge { int fr, to, cp, fl, cs, id; };
     int n, S, T;
@@ -1160,7 +1138,7 @@ struct MCMF {
 };
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 namespace FACTORIZE {
     const ll MAXX = 1000;
     const int FERMA_ITER = 30;
@@ -1277,7 +1255,7 @@ namespace FACTORIZE {
 }
 \end{minted}
 
-\begin{minted}[linenos,frame=single]{c++}
+\begin{minted}[frame=single]{c++}
 class EulerTourTrees {
 /*graph - forest 1 .. n get = is connected?
 no memory leaks 1 <= n, q <= 10^5 0.7 sec*/
