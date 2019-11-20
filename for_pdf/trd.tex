@@ -374,23 +374,6 @@ vector<vector<Edge>> get2components(const vector<vector<Edge>> &g,
 \end{minted}
 
 \begin{minted}[frame=single]{c++}
-vector<int> get_z(const string& s) {
-    int n = (int) s.size(); vector<int> z(n);
-    for (int l = 0, r = -1, i = 1; i < n; i++) {
-        z[i] = i <= r ? min(r - i, z[i - l]) : 0;
-        while (i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
-        if (i + z[i] > r) l = i, r = i + z[i];} return z;}
-\end{minted}
-
-\begin{minted}[frame=single]{c++}
-vector<int> get_pi(const string& s) {
-    int n = (int) s.size(); vector<int> p(n);
-    for (int j, i = 1; i < n; i++) {
-        for (j = p[i - 1]; j > 0 && s[i] != s[j]; j = p[j - 1]);
-        p[i] = (j += (s[i] == s[j]));} return p;}
-\end{minted}
-
-\begin{minted}[frame=single]{c++}
 pair<vector<int>, vector<int>> manacker(const string& s) { // -> {d0, d1}. RUN test!
     int n = (int) s.size();
     vector<int> d0(n), d1(n);
@@ -404,6 +387,57 @@ pair<vector<int>, vector<int>> manacker(const string& s) { // -> {d0, d1}. RUN t
         if (d0[i] > 0 && i + d0[i] > r) l = i - d0[i] + 1, r = i + d0[i];}
     return {d0, d1};}
 \end{minted}
+
+\begin{minted}[frame=single]{c++}
+vector<int> get_pi(const string& s) {
+    int n = (int) s.size(); vector<int> p(n);
+    for (int j, i = 1; i < n; i++) {
+        for (j = p[i - 1]; j > 0 && s[i] != s[j]; j = p[j - 1]);
+        p[i] = (j += (s[i] == s[j]));} return p;}
+\end{minted}
+
+\begin{minted}[frame=single]{c++}
+vector<int> get_z(const string& s) {
+    int n = (int) s.size(); vector<int> z(n);
+    for (int l = 0, r = -1, i = 1; i < n; i++) {
+        z[i] = i <= r ? min(r - i, z[i - l]) : 0;
+        while (i + z[i] < n && s[z[i]] == s[i + z[i]]) z[i]++;
+        if (i + z[i] > r) l = i, r = i + z[i];} return z;}
+\end{minted}
+
+\begin{minted}[frame=single]{c++}
+struct Tandem {int l, r, k; /*[l, l + 2 * k), [l + 1, l + 1 + 2 * k), ..., [r, r + 2 * k)*/};
+const int SIZE = (2e5 + 5) * 30; // (n)*log(n)
+const int MAXL = (2e5 + 5) * 4; // (n)*4, 4 = big const
+Tandem tds[SIZE], hlp[MAXL]; int tsz;
+void rec(const string& s, int L, int R) {
+    if (R - L + 1 <= 1) return;
+    int M = (L + R) / 2; rec(s, L, M); rec(s, M + 1, R); int nu = M - L + 1, nv = R - M;
+    string vu = s.substr(M + 1, nv) + "#" + s.substr(L, nu);
+    string urvr = vu; reverse(urvr.begin(), urvr.end());
+    vector<int> z1 = get_z(urvr), z2 = get_z(vu);
+    for (int x = L; x <= R; x++) {
+        if (x <= M) {
+            int k = M + 1 - x, k1 = L < x ? z1[nu - x + L] : 0;
+            int k2 = z2[nv + 1 + x - L], lsh = max(0, k - k2), rsh = min(k1, k - 1);
+            if (lsh <= rsh) tds[tsz++] = {x - rsh, x - lsh, k};
+        } else {
+            int k = x - M, k1 = x < R ? z2[x - M] : 0;
+            int k2 = z1[nu + nv - x + M + 1], lsh = max(1, k - k1), rsh = min(k2, k - 1);
+            if (lsh <= rsh) tds[tsz++] = {x - rsh + 1 - k, x - lsh + 1 - k, k};}}}
+void compress() { // O(n*log(n)*log(n)) can be replace with count sort (O(n*log(n)))
+    // O(n*log(n)) --> O(n) ||| BE careful with ML !!!
+    sort(tds, tds + tsz, [](const Tandem& t1, const Tandem& t2) {
+        return t1.k < t2.k || (t1.k == t2.k && t1.l < t2.l);});
+    int hlp_sz = 0; for (int i = 0; i < tsz; i++) { int j = i; 
+        while (j + 1 < tsz && tds[i].k == tds[j + 1].k && tds[j].r + 1 == tds[j + 1].l) j++;
+        hlp[hlp_sz++] = {tds[i].l, tds[j].r, tds[j].k}; i = j;}
+    memcpy(tds, hlp, sizeof(Tandem) * hlp_sz); tsz = hlp_sz;}
+void main_lorentz(const string &s) {
+    // n = 10^6  time = 1.8 sec MEM = nlog(n) * 12 bytes
+    int n = (int) s.size(); tsz = 0; rec(s, 0, n - 1); compress();}
+\end{minted}
+
 
 \begin{minted}[frame=single]{c++}
 const int A = 26; // alph size
@@ -1024,36 +1058,14 @@ struct pal_tree {
 #include <ext/pb_ds/tree_policy.hpp>
 using namespace __gnu_pbds;
 using namespace std;
-typedef
-    tree<
-        pair< int, int >,
-        null_type,
-        less< pair< int, int > >,
-        rb_tree_tag,
-        tree_order_statistics_node_update
-    > stat_set;
-// ...
-ordered_set X;
-    X.insert(1);
-    X.insert(2);
-    X.insert(4);
-    X.insert(8);
-    X.insert(16);
-    cout<<*X.find_by_order(1)<<endl; // 2
-    cout<<*X.find_by_order(2)<<endl; // 4
-    cout<<*X.find_by_order(4)<<endl; // 16
-    cout<<(end(X)==X.find_by_order(6))<<endl; // true
-    cout<<X.order_of_key(-5)<<endl;  // 0
-    cout<<X.order_of_key(1)<<endl;   // 0
-    cout<<X.order_of_key(3)<<endl;   // 2
-    cout<<X.order_of_key(4)<<endl;   // 2
-    cout<<X.order_of_key(400)<<endl; // 5
-// ...
-// pbds
+typedef tree<int, null_type, less<int>, 
+    rb_tree_tag, tree_order_statistics_node_update> stat_set;
+// insert, find_by_order, order_of_key (multiset = set<pair<int, int>>)
+// ====================================
 #include <ext/pb_ds/assoc_container.hpp>
 #include <ext/pb_ds/detail/standard_policies.hpp>
 using namespace __gnu_pbds;
-gp_hash_table<int, int> table; // the usage is the same as the unordered_map
+gp_hash_table<int, int> table; // as unordered_map (instead of count use find)
 \end{minted}
 
 \begin{minted}[frame=single]{c++}
@@ -1526,5 +1538,44 @@ vector<Edge> work(const vector<vector<Edge>>& graph) {
 set $p_i=0 \forall i > 0$. $\forall\,i > 0$: find min-cut $(S, T)$ 
 between $i$ and $p_i$, where $i \in S, p_i \in T$; 
 for each node $j$, s.t. $i < j, j \in S, p_j=p_i$ set $p_j = i$
+
+\begin{minted}[frame=single]{c++}
+inline ll _sum(ll a, ll b, ll m) { return a + b < m ? a + b : a + b - m;}
+inline ll _sub(ll a, ll b, ll m) {return a >= b ? a - b : a - b + m;}
+inline ll _mul(ll a, ll b, ll m) {return (a * b) % m;}
+struct gauss_number { ll w, p, x, y;
+    gauss_number(): w(0), p(2), x(0), y(0) { }
+    gauss_number(ll _w, ll _p, ll _x, ll _y): w(_w), p(_p), x(_x), y(_y) {
+        assert(p > 0); w %= p; if(w < 0) w += p; 
+        x %= p; if(x < 0) x += p; y %= p; if(y < 0) y += p;}
+    gauss_number(const gauss_number& o): w(o.w), p(o.p), x(o.x), y(o.y) { }
+    gauss_number operator+(const gauss_number& o) const {
+        return gauss_number(w, p, _sum(x, o.x, p), _sum(y, o.y, p));}
+    gauss_number operator-() const {
+        return gauss_number(w, p, !x ? x : p - x, !y ? y : p - y);}
+    gauss_number operator-(const gauss_number& o) const {return *this + (-o);}
+    gauss_number operator*(const gauss_number& o) const {
+        return gauss_number(w, p,_sum(_mul(x, o.y, p), _mul(y, o.x, p), p),
+            _sum(_mul(y, o.y, p), _mul(x, _mul(o.x, w, p), p), p));}};
+ll binpow(ll x, ll p, ll m) {
+    ll res = 1 % m, tmp = x % m;
+    if(res < 0) res += m; if(tmp < 0) tmp += m;
+    while(p > 0) { if(p & 1) res = _mul(res, tmp, m);
+        tmp = _mul(tmp, tmp, m); p >>= 1;}return res;}
+gauss_number gauss_pow(gauss_number x, ll p) {
+    gauss_number res(x.w, x.p, 0, 1), tmp(x);
+    while(p > 0) {if(p & 1) res = res * tmp;
+        tmp = tmp * tmp; p >>= 1;} return res;}
+ll find_solution(ll p, ll a) { // x^2 = a (mod p), x = ?, p is prime
+    assert(0ll <= a && a < p);
+    if(a == 0 || p == 2) return a;
+    if(binpow(a, (p - 1) / 2, p) == p - 1) return -1ll;
+    mt19937_64 rnd(42); ll k; gauss_number e(a, p, 0, 1);
+    while(1) { k = rnd() % p; if(k < 0) k += p;
+        gauss_number y(a, p, 1, k);
+        y = gauss_pow(y, (p - 1) / 2); y.y = _sub(y.y, 1, p);
+        {ll re = _mul(y.y, binpow(y.x, p - 2, p), p);
+        if(_mul(re, re, p) == a) return re;}}}
+\end{minted}
 
 \end{document}
