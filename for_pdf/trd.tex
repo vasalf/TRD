@@ -1552,4 +1552,62 @@ ll find_solution(ll p, ll a) { // x^2 = a (mod p), x = ?, p is prime
         if(_mul(re, re, p) == a) return re;}}}
 \end{minted}
 
+\begin{minted}[frame=single]{c++}
+ll rec(ll pos, ll left_len, ll left_cost, ll right_len, ll right_cost, ll k) {
+    if (!k || !right_len) return pos;
+    if (pos >= right_len) {
+        ll t = (left_len - pos + right_len - 1) / right_len;
+        if (t * right_cost + left_cost > k) return pos;
+        pos += t * right_len - left_len;
+        k -= (t * right_cost + left_cost);
+    }
+    ll nxt_left_len = left_len % right_len;
+    ll nxt_left_cost = (left_len / right_len) * right_cost + left_cost;
+    if (nxt_left_len == 0) return pos;
+    {
+        ll t = pos / nxt_left_len;
+        if (t * nxt_left_cost > k) return pos - nxt_left_len * (k / nxt_left_cost);
+        k -= t * nxt_left_cost;
+        pos -= t * nxt_left_len;
+    }
+    return rec(
+            pos,
+            nxt_left_len,
+            nxt_left_cost,
+            right_len % nxt_left_len,
+            (right_len / nxt_left_len) * nxt_left_cost + right_cost,
+            k
+    );
+}
+// finds (nw_st + step * x) % mod --> min, 0 <= x <= bound
+ll euclid(ll nw_st, ll step, ll mod, ll bound) {
+    return rec(nw_st, mod, 0, step, 1, bound);
+}
+\end{minted}
+
+\fbox{$d_i = v_i - \sum\limits_{j<i}\frac{\langle v_i, d_j\rangle}{\langle d_j, d_j\rangle}d_j$}
+\fbox{$\sum\limits_{k=1}^{n}\mu(k)\lfloor\frac n k\rfloor = 1$}
+\fbox{$g(n)=\sum\limits_{d|n}f(d) \Leftrightarrow f(n) = \sum\limits_{d|n}\mu(d)g(n/d)$}
+\fbox{$\mu^*_A(a,b)=
+\begin{cases}
+1, & a=b \\
+-\sum\limits_{a\preccurlyeq z \prec b}\mu_A^*(a, z), & a \prec b \\
+0, & b \prec a
+\end{cases}$}
+\fbox{$\sum\limits_{d|n}\varphi(d) = n$}
+\fbox{$\varphi(n)=\sum\limits_{d|n}d\cdot\mu(\frac n d)$}
+
+\fbox{$F(N) = \sum\limits_{n=1}^N\varphi(n) \Rightarrow F(N) = \frac{N(N+1)}2 - \sum\limits_{k=2}^{N}F(\lfloor\frac N k\rfloor)$}
+
+\begin{minted}[frame=single]{c++}
+void fwht(ll* a, ll mod) { // any mod, len(a) = 2^LOG
+    ll f1, f2; // c[i^j] += a[i] * b[j] => fwht(a), fwht(b), c = a * b, fwht(c)
+    for (int len = 1; len < (1 << LOG); len <<= 1) {
+        for (int i = 0; i < (1 << LOG); i += 2 * len) {
+            for (int j = 0; j < len; j++) {
+                f1 = a[i + j] + a[i + j + len], f2 = a[i + j] - a[i + j + len];
+                if (f1 >= mod) f1 -= mod; if (f2 < 0) f2 += mod;
+                a[i + j] = f1, a[i + j + len] = f2;}}}}
+\end{minted}
+
 \end{document}
