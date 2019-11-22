@@ -96,7 +96,7 @@ gauss_number gauss_pow(gauss_number x, ll p) {
     return res;
 }
 
-ll find_solution(ll p, ll a) {
+ll find_solution(ll p, ll a) { // x^2 = a (mod p), x = ?, p is prime
     assert(0ll <= a && a < p);
     if(a == 0 || p == 2) return a;
     if(binpow(a, (p - 1) / 2, p) == p - 1) return -1ll;
