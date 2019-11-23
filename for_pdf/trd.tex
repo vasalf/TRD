@@ -1021,6 +1021,11 @@ vector<int> extrapolate(vector<int> y, int m) {
 % \end{minted}
 
 \begin{minted}[frame=single]{c++}
+// diff[v] = len[v] - len[link[v]]
+// slink[v], diff[v] != diff[slink[v]], len[slink[v]] <-- max, slink path O(log(n))
+// len[quickLink[v]] <-- max, preceded in v by as symbol different from b,
+// where b = v[|v| - |link[v]|] -- preceding the suffix link[v] in v, qlink path O(log(n))
+
 struct pal_tree {
     int sz;
     vector<unordered_map<int,int>> g;
@@ -1031,28 +1036,13 @@ struct pal_tree {
     void add_string (const string &s) {
         for (int i = 0; i < s.length(); i++) {
             char c = s[i] - 'a';
-            while (i - len[v] - 1 < 0 || s[i - len[v] - 1] - 'a' != c)
-                v = suf[v];
+            while (i - len[v] - 1 < 0 || s[i - len[v] - 1] - 'a' != c) v = suf[v];
             if (!g[v].count(c)) {
-                g.emplace_back();
-                int t = len[v];
-                len.push_back(t + 2);
-                int u = v;
-                do {
-                    u = suf[u];
-                } while (u && s[i - len[u] - 1] - 'a' != c);
+                g.emplace_back(); int t = len[v]; len.push_back(t + 2); int u = v;
+                do { u = suf[u]; } while (u && s[i - len[u] - 1] - 'a' != c);
                 suf.push_back(!g[u].count(c) ? 1 : g[u][c]);
-                t = cn[suf.back()];
-                cn.push_back(t + 1);
-                g[v][c] = sz++;
-                cur++;
-            }
-            v = g[v][c];
-            fin.push_back(cn[v]);
-        }
-        return;
-    }
-};
+                t = cn[suf.back()]; cn.push_back(t + 1); g[v][c] = sz++; cur++;}
+            v = g[v][c]; fin.push_back(cn[v]);}return;}};
 \end{minted}
 
 \begin{minted}[frame=single]{c++}
