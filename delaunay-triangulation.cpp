@@ -1,466 +1,450 @@
-﻿#ifdef debug
-#define _GLIBCXX_DEBUG
-#endif
-
-#include <bits/stdc++.h>
-#include "optimization.h"
+﻿#include <bits/stdc++.h>
 
 using namespace std;
 
-#define ALL(x) (x).begin(), (x).end()
-#define vec vector
-
-typedef unsigned int ui;
+typedef pair<int, int> pii;
+typedef pair<long long, long long> pll;
 typedef long long ll;
+typedef unsigned int ui;
+typedef unsigned long long ull;
 typedef long double ld;
-typedef pair< int, int > pii;
-typedef pair< long long, long long > pll;
 
 const int inf = 1e9;
 const ll inf64 = 1e18;
 
-namespace RANDOM {
-    template< class T >
-    T next_rand(T l, T r, mt19937& rnd) {
-        return rnd() % (r - l + 1) + l;
+struct pt;
+struct Face;
+struct Edge;
+struct Node;
+
+struct pt {
+    int x = 0, y = 0;
+
+    pt() = default;
+
+    pt operator-(const pt &o) const {
+        return {x - o.x, y - o.y};
     }
+
+    ll vector_mul(const pt &o) const {
+        return 1ll * x * o.y - 1ll * o.x * y;
+    }
+
+    bool isOn(const pt &a, const pt &b) const {
+        if (x < min(a.x, b.x) || x > max(a.x, b.x))
+            return false;
+
+        if (y < min(a.y, b.y) || y > max(a.y, b.y))
+            return false;
+
+        return (b - a).vector_mul(*this - a) == 0;
+    }
+
+    /// polygon should be defined with clockwise or counter-clockwise bypass
+    /// polygon should be strictly convex
+    ///
+    /// checks whether point lies in polygon
+    bool isIn(const vector<pt> &polygon, bool strictly = false) const {
+        int sz = (int) polygon.size();
+        bool positive = false;
+        bool negative = false;
+        bool zero = false;
+        for (int i = 0; i < sz; i++) {
+            int j = i + 1 < sz ? i + 1 : 0;
+            ll vm = (polygon[j] - polygon[i]).vector_mul(*this - polygon[i]);
+            if (vm > 0) positive = true;
+            if (vm < 0) negative = true;
+            if (vm == 0) zero = true;
+        }
+        return !(positive && negative) && (!strictly || !zero);
+    }
+
+    ll sqr_norm() const {
+        return 1ll * x * x + 1ll * y * y;
+    }
+};
+
+struct Edge {
+    Node *u = 0;
+    Node *v = 0;
+    Face *f1 = 0;
+    Face *f2 = 0;
+
+    Node* to(Node *from) const {
+        return u == from ? v : u;
+    }
+
+    void erase_face(Face *f) {
+        if (f1 == f)
+            f1 = 0;
+        else if (f2 == f)
+            f2 = 0;
+    }
+
+    void insert_face(Face *f) {
+        if (f1 == 0)
+            f1 = f;
+        else if (f2 == 0)
+            f2 = f;
+    }
+
+    void flip() {
+        // check and flip if needed
+        // TODO
+    }
+};
+
+struct Face {
+    Edge *e1;
+    Edge *e2;
+    Edge *e3;
+
+    vector<Node*> get_nodes() const {
+        unordered_set<Node*> nodes;
+
+        nodes.insert(e1->u);
+        nodes.insert(e1->v);
+
+        nodes.insert(e2->u);
+        nodes.insert(e2->v);
+
+        nodes.insert(e3->u);
+        nodes.insert(e3->v);
+
+        return vector<Node*>(nodes.begin(), nodes.end());
+    }
+
+    static bool check_edge(const Edge *e, Node *u, Node *v) {
+        return (e->u == u && e->v == v) || (e->u == v && e->v == u);
+    }
+
+    Edge* get_edge(Node *u, Node *v) {
+        if (check_edge(e1, u, v))
+            return e1;
+        if (check_edge(e2, u, v))
+            return e2;
+        if (check_edge(e3, u, v))
+            return e3;
+        return 0;
+    }
+
+    void erase_me_from_edges() {
+        e1->erase_face(this);
+        e2->erase_face(this);
+        e3->erase_face(this);
+    }
+
+    pair<Edge*, Edge*> get_two_others(Edge *e) {
+        if (e == e1)
+            return make_pair(e2, e3);
+        else if(e == e2)
+            return make_pair(e1, e3);
+        else if (e == e3)
+            return make_pair(e1, e2);
+        else
+            assert(false);
+    }
+};
+
+/// nullptr is the infinity point
+struct Node {
+    pt p{};
+    unordered_set<Edge*> edges;
+    Node *down = 0; // link to the node in previous layer
+    int id = -1;
+
+    Node() = default;
+
+    Node(const pt &p, int id) : p(p), id(id) {}
+
+    bool isOn(Edge *e) const {
+        if (!e)
+            return false;
+
+        if (!e->u || !e->v)
+            return false; // nothing is lying on edge (*, inf)
+
+        return p.isOn(e->u->p, e->v->p);
+    }
+
+    bool isIn(Face *f, bool strictly = false) const {
+        if (!f)
+            return false;
+
+        vector<pt> points;
+        for (const Node *v : f->get_nodes()) {
+            if (v)
+                points.push_back(v->p);
+            else
+                return true;
+        }
+
+        return p.isIn(std::vector<pt>(points), strictly);
+    }
+
+    void insert_edge(Edge *e) {
+        edges.insert(e);
+    }
+
+    void erase_edge(Edge *e) {
+        edges.erase(e);
+    }
+};
+
+/// Connect all important links
+void create_face(Face *f, Edge *e1, Edge *e2, Edge *e3) {
+    e1->insert_face(f);
+    e2->insert_face(f);
+    e3->insert_face(f);
+
+    f->e1 = e1;
+    f->e2 = e2;
+    f->e3 = e3;
 }
 
-namespace geom {
+void create_edge(Edge *e) {
+    if (e->u)
+        e->u->insert_edge(e);
+    if (e->v)
+        e->v->insert_edge(e);
+}
 
-    struct pt {
-        enum SortType {ANGLE_SORT, CRD_SORT};
+void destroy_edge(Edge *e) {
+    if (e->u)
+        e->u->erase_edge(e);
+    if (e->v)
+        e->v->erase_edge(e);
+}
 
-        ll x, y;
-        int id;
-        SortType sort_type;
+/// there should not be two equal points at the same time
+/// there should be at least two points
+///
+/// probability for node to be pushed to the upper layer
+void build_delanay(const vector<pt> &ps, double probability = 0.5) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0.0, 1.0);
 
-        pt():
-            x(0), y(0), id(-1), sort_type(CRD_SORT)
-        { }
+    int n = (int) ps.size();
 
-        pt(ll _x, ll _y, int _id = -1, SortType _sort_type = CRD_SORT):
-            x(_x), y(_y), id(_id), sort_type(_sort_type)
-        { }
+    vector<vector<Node*>> layers; // localization structure
 
-        pt(const pt& o):
-            x(o.x), y(o.y), id(o.id), sort_type(o.sort_type)
-        { }
+    for (int i = 0; i < n; i++) {
+        const pt &q = ps[i];
 
-        tuple< ll, ll, int > get_tuple() const {
-            return make_tuple(x, y, id);
-        }
+        int n_layers = 1;
+        while (dis(gen) < probability)
+            n_layers++;
 
-        tuple< double, ll, ll, ll, int > get_angle_tuple() const {
-            return make_tuple(get_angle(), module_sqr(), x, y, id);
-        }
+        Node *nearest_node = 0;
+        ll nearest_dist = 4 * inf64;
 
-        bool operator<(const pt& o) const {
-            bool res;
-            switch(sort_type) {
-            case CRD_SORT:
-                res = (get_tuple() < o.get_tuple());
-                break;
-            case ANGLE_SORT:
-                res = (get_angle_tuple() < o.get_angle_tuple());
-                break;
-            }
-            return res;
-        }
+        vector<Node*> added_nodes;
 
-        bool operator==(const pt& o) const {
-            return get_tuple() == o.get_tuple();
-        }
+        for (int j = (int) layers.size() - 1; j >= 0; j--) {
 
-        pt operator-() const {
-            return pt(-x, -y, id);
-        }
+            if (j < n_layers) {
+                // find face, insert and flip
+                Node *node = new Node(q, i);
+                if (layers[j].size() == 1) {
+                    Node *second_node = layers[j][0];
 
-        pt operator+(const pt& o) const {
-            return pt(x + o.x, y + o.y);
-        }
+                    Edge *e1 = new Edge{node, 0, 0, 0};
+                    Edge *e2 = new Edge{second_node, 0, 0, 0};
+                    Edge *edge = new Edge{node, second_node, 0, 0};
 
-        pt operator-(const pt& o) const {
-            return pt(x - o.x, y - o.y);
-        }
+                    Face *f1 = new Face();
+                    Face *f2 = new Face();
 
-        ll module_sqr() const {
-            return sqr(x) + sqr(y);
-        }
+                    create_face(f1, e1, e2, edge);
+                    create_face(f2, e1, e2, edge);
+                } else {
+                    // how to find face? TODO
 
-        double module() const {
-            return sqrt(module_sqr());
-        }
+                    Face *face = 0;
 
-        ll dist_sqr(const pt& o) const {
-            return (*this - o).module_sqr();
-        }
-
-        double dist(const pt& o) const {
-            return (*this - o).module();
-        }
-
-        ll scalar_mul(const pt& o) const {
-            return x * o.x + y * o.y;
-        }
-
-        ll vector_mul(const pt& o) const {
-            return x * o.y - o.x * y;
-        }
-
-        void read(int _id = -1) {
-            id = _id;
-            x = readInt();
-            y = readInt();
-        }
-
-        double get_angle() const {
-            return atan2(y, x);
-        }
-
-        double get_angle(const pt& o) const {
-            double tmp = 1.0 * scalar_mul(o) / (module() * o.module());
-            if(tmp > 1) tmp = 1.0;
-            if(tmp < -1) tmp = -1.0;
-            return acos(tmp);
-        }
-
-        static pt gen_point(mt19937& rnd, int lx, int rx, int ly, int ry) {
-            pt res;
-            res.x = RANDOM::next_rand(lx, rx, rnd);
-            res.y = RANDOM::next_rand(ly, ry, rnd);
-            return res;
-        }
-
-    private:
-
-        ll sqr(ll vl) const {
-            return vl * vl;
-        }
-
-    };
-
-    const double eps = 1e-9;
-
-    ostream& operator<<(ostream& os, const pt& p) {
-        os << p.x << " " << p.y;
-        return os;
-    }
-
-    // ! tested !
-    // get_neigh by angle from vector <stop - center>
-    pt get_neigh(const pt& center, const pt& stop, set< pt >& neigh, bool is_prev) {
-        bool is_next = !is_prev;
-
-        pt tmp = stop - center;
-        tmp.sort_type = pt::ANGLE_SORT;
-        set< pt >::iterator fnd, nxt, prv;
-
-        fnd = neigh.lower_bound(tmp);
-
-        double res_angle = 1e9;
-        pt res;
-
-        auto relax = [&](const pt& candidate) {
-            double tmp_angle = candidate.get_angle(tmp);
-            ll vec_prod = candidate.vector_mul(tmp);
-            if(((is_prev && vec_prod > 0) || (is_next && vec_prod < 0)) &&
-                (
-                 res.id == -1 ||
-                 fabs(tmp_angle) < res_angle ||
-                 (fabs(fabs(tmp_angle) - res_angle) < eps && res.module_sqr() > candidate.module_sqr())
-                )
-            ) {
-                res_angle = fabs(tmp_angle);
-                res = candidate;
-            }
-        };
-
-        if(!neigh.empty()) {
-            relax(*neigh.begin());
-            nxt = next(neigh.begin());
-            if(nxt != neigh.end()) {
-                relax(*nxt);
-            }
-            relax(*(--neigh.end()));
-            prv = --neigh.end();
-            if(prv != neigh.begin()) {
-                prv = prev(prv);
-                relax(*prv);
-            }
-        }
-
-        if(fnd != neigh.end()) {
-            relax(*fnd);
-            nxt = fnd != neigh.end() ? next(fnd) : neigh.end();
-            prv = fnd != neigh.begin() && fnd != neigh.end() ? prev(fnd) : neigh.end();
-            if(nxt != neigh.end()) {
-                relax(*nxt);
-                nxt = next(nxt);
-                if(nxt != neigh.end()) {
-                    relax(*nxt);
-                }
-            }
-            if(prv != neigh.end()) {
-                relax(*prv);
-                if(prv != neigh.end() && prv != neigh.begin()) {
-                    prv = prev(prv);
-                    relax(*prv);
-                }
-            }
-        }
-
-        return res;
-    }
-
-    void test_neigh() {
-
-        mt19937 rnd(42);
-        const int MINN = 100;
-        const int MAXN = 200;
-        const int MINX = 0;
-        const int MAXX = 30000;
-
-        while(1) {
-            int n = RANDOM::next_rand(MINN, MAXN, rnd);
-
-            set< pt > have;
-            vec< pt > res;
-
-            for(int it = 0;it < n;it++) {
-                while(1) {
-                    pt tmp = pt::gen_point(rnd, MINX, MAXX, MINX, MAXX);
-                    if(have.count(tmp)) {
-                        continue;
-                    }
-                    have.insert(tmp);
-                    res.push_back(tmp);
-                    break;
-                }
-            }
-
-            for(int i = 0;i < (int)res.size();i++) {
-                for(int j = 0;j < (int)res.size();j++) {
-                    if(i == j) continue;
-                    assert(!(res[i] == res[j]));
-                }
-            }
-
-            int ch = 1;
-
-            for(int i = 0;i < (int)res.size() && ch;i++) {
-                for(int j = i + 1;j < (int)res.size() && ch;j++) {
-                    for(int o = j + 1;o < (int)res.size();o++) {
-                        if((res[o] - res[j]).vector_mul(res[i] - res[j]) == 0) {
-                            ch = 0;
-                            break;
+                    for (Node *v : layers[j]) {
+                        for (Edge *e : v->edges) {
+                            if (node->isIn(e->f1))
+                                face = e->f1;
+                            if (node->isIn(e->f2))
+                                face = e->f2;
                         }
                     }
-                }
-            }
 
-            if(!ch) continue;
-//            cout << ch << "\n";
-//            continue;
+                    assert(face);
 
-            have.clear();
+                    // TODO
+                    if (node->isIn(face, true)) {
+                        // insert in triangle
 
-            for(int i = 1;i < n;i++) {
-                pt tmp = res[i] - res[0];
-                tmp.id = res[i].id = i + 1;
-                tmp.sort_type = pt::ANGLE_SORT;
-                have.insert(tmp);
-            }
+                        vector<Node*> vs = face->get_nodes();
+                        Node *v1, *v2, *v3;
 
-            int ok = 1;
+                        v1 = vs[0], v2 = vs[1], v3 = vs[2];
 
-            for(int i = 0;i < n;i++) {
-                pt tmp = pt::gen_point(rnd, MINX, MAXX, MINX, MAXX);
-                int best = -1;
-                double ang = 1e9;
-                ll md = inf64;
-                pt best_pt;
-                for(pt p : have) {
-                    double tang = p.get_angle(tmp - res[0]);
-                    ll vec_prod = p.vector_mul(tmp - res[0]);
-                    if(vec_prod < 0 && (best == -1 || ang > tang || fabs(ang - tang) < 1e-9 && md > p.module_sqr())) {
-                        ang = tang;
-                        best_pt = p + res[0];
-                        best = p.id;
-                        md = p.module_sqr();
+                        Edge *e1, *e2, *e3;
+                        Face *f1, *f2, *f3;
+
+                        e1 = new Edge{node, v1, 0, 0};
+                        e2 = new Edge{node, v2, 0, 0};
+                        e3 = new Edge{node, v3, 0, 0};
+
+                        f1 = face;
+                        f2 = new Face();
+                        f3 = new Face();
+
+                        Edge *t1 = face->get_edge(v1, v2);
+                        Edge *t2 = face->get_edge(v2, v3);
+                        Edge *t3 = face->get_edge(v1, v3);
+
+                        t1->erase_face(face);
+                        t2->erase_face(face);
+                        t3->erase_face(face);
+
+                        create_edge(e1);
+                        create_edge(e2);
+                        create_edge(e3);
+
+                        create_face(f1, e1, e2, t1);
+                        create_face(f2, e2, e3, t2);
+                        create_face(f3, e1, e3, t3);
+
+                        t1->flip();
+                        t2->flip();
+                        t3->flip();
+                    } else {
+                        // insert in edge
+
+                        Edge *e = 0;
+
+                        if (node->isOn(face->e1))
+                            e = face->e1;
+                        else if (node->isOn(face->e2))
+                            e = face->e2;
+                        else if (node->isOn(face->e3))
+                            e = face->e3;
+
+                        assert(e);
+
+                        Face *f1 = e->f1;
+                        Face *f2 = e->f2;
+
+                        assert(f1);
+                        assert(f2);
+
+                        Edge *g = new Edge{node, e->v, 0, 0};
+
+                        Node *A, *B;
+                        for (Node *x : f1->get_nodes()) {
+                            if (x != e->u && x != e->v)
+                                A = x;
+                        }
+                        for (Node *x : f2->get_nodes()) {
+                            if (x != e->u && x != e->v)
+                                B = x;
+                        }
+
+                        f1->erase_me_from_edges();
+                        f2->erase_me_from_edges();
+
+                        Face *f3 = new Face();
+                        Face *f4 = new Face();
+
+                        Edge *t1 = new Edge{node, A};
+                        Edge *t2 = new Edge{node, B};
+
+                        create_edge(t1);
+                        create_edge(t2);
+
+                        destroy_edge(e);
+                        e->v = node;
+                        create_edge(e);
+                        create_edge(g);
+
+                        Edge *z1, *z2, *z3, *z4;
+
+                        tie(z1, z2) = f1->get_two_others(e);
+                        tie(z3, z4) = f2->get_two_others(e);
+
+                        create_face(f1, z1, e, t1);
+                        create_face(f3, z2, g, t1);
+                        create_face(f2, z3, e, t2);
+                        create_face(f4, z4, g, t2);
+
+                        z1->flip();
+                        z2->flip();
+                        z3->flip();
+                        z4->flip();
                     }
                 }
-                pt fnd = get_neigh(res[0], tmp, have, false);
-                if(1 || fnd.id != best) {
-                    cout << "WA !\n";
-                    cout << "expected = " << best << "\n";
-                    cout << "found = " << fnd.id << "\n";
-                    cout << "founded angle = " << ang << "\n";
-                    cout << best_pt.x << " " << best_pt.y << " wtf\n";
-                    cout << "md = " << md << "\n";
-                    cout << tmp.x << " " << tmp.y << " q\n";
-                    ok = 0;
-                    get_neigh(res[0], tmp, have, true);
-                    break;
+
+                layers[j].push_back(node);
+                added_nodes.push_back(node);
+            }
+
+            if (j > 0) { // let's go to the lower layer
+                if (!nearest_node) {
+                    for (Node *candidate : layers.back()) {
+                        ll candidate_dist = (candidate->p - q).sqr_norm();
+                        if (candidate_dist < nearest_dist) {
+                            nearest_dist = candidate_dist;
+                            nearest_node = candidate;
+                        }
+                    }
+                } else {
+                    nearest_node = nearest_node->down;
+                    while (1) {
+                        ll best_dist = nearest_dist;
+                        Node *best_node = nearest_node;
+                        for (const Edge *edge : nearest_node->edges) {
+                            Node *candidate = edge->to(nearest_node);
+                            ll candidate_dist = (candidate->p - q).sqr_norm();
+                            if (candidate_dist < best_dist) {
+                                best_dist = candidate_dist;
+                                best_node = candidate;
+                            }
+                        }
+                        if (nearest_node == best_node)
+                            break;
+                        nearest_dist = best_dist;
+                        nearest_node = best_node;
+                    }
                 }
             }
-
-            if(ok) {
-                cout << "OK\n";
-                continue;
-            }
-
-            for(int i = 0;i < n;i++) {
-                cout << res[i] << " " << i + 1 << "\n";
-            }
-//            cout << "-------\n";
-
-            for(int i = 1;i < n;i++) {
-                pt tmp = res[i] - res[0];
-                tmp.id = res[i].id = i + 1;
-                tmp.sort_type = pt::ANGLE_SORT;
-                have.insert(tmp);
-            }
-
-            for(pt p : have) {
-                cout << "Segment " << (p + res[0]).x << " " << (p + res[0]).y << " " << res[0].x << " " << res[0].y << "\n";
-            }
-
-            for(pt p : have) {
-                cout << p.id << " ";
-            }
-
-            cout << "\n";
-
-            break;
         }
-    }
-}
 
-const int N = 5e4 + 5;
+        reverse(added_nodes.begin(), added_nodes.end());
 
-void change_directed_edge( // p1 ---> p2
-    geom::pt p1, geom::pt p2, char type,
-    vec< set< geom::pt > >& g, /* graph-result */
-    vec< set< geom::pt > > sorted_by_angle_g // sorted_by_angle of vector (v, to) graph-result
-) {
-    geom::pt tmp;
-
-    {
-        tmp = p2;
-        tmp.sort_type = geom::pt::CRD_SORT;
-        tmp.id = p2.id;
-        if(type == '+') {
-            g[p1.id].insert(tmp);
-        }else {
-            g[p1.id].erase(tmp);
+        while ((int) layers.size() < n_layers) {
+            Node *node = new Node(q, i);
+            layers.push_back({node});
+            added_nodes.push_back(node);
         }
-    }
 
-    {
-        tmp = p2 - p1;
-        tmp.sort_type = geom::pt::ANGLE_SORT;
-        tmp.id = p2.id;
-        if(type == '+') {
-            sorted_by_angle_g[p1.id].insert(tmp);
-        }else {
-            sorted_by_angle_g[p1.id].erase(tmp);
+        for (int j = 1; j < (int) added_nodes.size(); j++) {
+            added_nodes[j]->down = added_nodes[j - 1];
         }
-    }
-}
-
-void change_edge(
-    geom::pt p1, geom::pt p2, char type,
-    vec< set< geom::pt > >& g, /* graph-result */
-    vec< set< geom::pt > > sorted_by_angle_g // sorted_by_angle of vector (v, to) graph-result
-) {
-    change_directed_edge(p1, p2, type, g, sorted_by_angle_g);
-    change_directed_edge(p2, p1, type, g, sorted_by_angle_g);
-}
-
-void delaunay(
-    const vec< geom::pt >& db, /* global data base of points */
-    vec< geom::pt > pts, /* points in current stage */
-    vec< set< geom::pt > >& g, /* graph-result */
-    vec< set< geom::pt > > sorted_by_angle_g // sorted_by_angle of vector (v, to) graph-result
-) {
-
-    int n = (int)pts.size();
-
-    if(n <= 3) {
-        for(int j, i = 0;i < 3;i++) {
-            j = i; if(++j == 3) j = 0;
-            change_edge(
-                pts[i], pts[j], '+',
-                g, sorted_by_angle_g
-            );
-        }
-        return;
-    }
-
-    sort(ALL(pts));
-
-    int n1 = n / 2;
-    int n2 = n - n1;
-
-    vec< geom::pt > left_pts(pts.begin(), pts.begin() + n1);
-    vec< geom::pt > right_pts(pts.begin() + n1, pts.end());
-
-    assert((int)left_pts.size() == n1);
-    assert((int)right_pts.size() == n2);
-
-    delaunay(db, left_pts, g, sorted_by_angle_g);
-    delaunay(db, right_pts, g, sorted_by_angle_g);
-
-    int L = -1; // id of lowest-rightest of left part
-    int R = -1; // id of lowest-leftest of right part
-
-    // find L
-    {
-        for(geom::pt lpt : left_pts) {
-            if((lpt.y < db[L].y) ||
-               (lpt.y == db[L].y && lpt.x > db[L].x)) {
-                L = lpt.id;
-            }
-        }
-    }
-
-    // find R
-    {
-        for(geom::pt rpt : right_pts) {
-            if((rpt.y < db[R].y) ||
-               (rpt.y == db[R].y && rpt.x < db[R].x)) {
-                R = rpt.id;
-            }
-        }
-    }
-
-    while(L != -1 && R != -1) {
-        change_edge(
-            db[L], db[R], '+',
-            g, sorted_by_angle_g
-        );
     }
 }
 
 int main() {
 
-#ifdef debug
+#ifdef DEBUG
     freopen("input.txt", "r", stdin);
 #endif
 
-//    int n;
+    ios_base::sync_with_stdio(0);
+    cin.tie(0);
 
-//    n = readInt();
+    int n;
+    cin >> n;
 
-//    vec< geom::pt > pts(n);
-//    vec< set< int > > g(n);
-
-//    for(int i = 0;i < n;i++) {
-//        pts[i].read(i);
-//    }
-
-    geom::test_neigh();
+    vector<pt> p(n);
+    for (int i = 0; i < n; i++) {
+        cin >> p[i].x >> p[i].y;
+        // TODO: id
+    }
 
     return 0;
 }
