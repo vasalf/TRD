@@ -1,4 +1,4 @@
-﻿#include <bits/stdc++.h>
+#include <bits/stdc++.h>
 
 using namespace std;
 
@@ -13,9 +13,9 @@ const int inf = 1e9;
 const ll inf64 = 1e18;
 
 struct pt;
+struct Node;
 struct Face;
 struct Edge;
-struct Node;
 
 struct pt {
     int x = 0, y = 0;
@@ -30,7 +30,11 @@ struct pt {
         return 1ll * x * o.y - 1ll * o.x * y;
     }
 
-    bool isOn(const pt &a, const pt &b) const {
+    ll scalar_mul(const pt &o) const {
+        return 1ll * x * o.x + 1ll * y * o.y;
+    }
+
+    bool isOnSegment(const pt &a, const pt &b) const {
         if (x < min(a.x, b.x) || x > max(a.x, b.x))
             return false;
 
@@ -44,7 +48,7 @@ struct pt {
     /// polygon should be strictly convex
     ///
     /// checks whether point lies in polygon
-    bool isIn(const vector<pt> &polygon, bool strictly = false) const {
+    bool isInPolygon(const vector<pt> &polygon, bool strictly = false) const {
         int sz = (int) polygon.size();
         bool positive = false;
         bool negative = false;
@@ -60,7 +64,11 @@ struct pt {
     }
 
     ll sqr_norm() const {
-        return 1ll * x * x + 1ll * y * y;
+        return this->scalar_mul(*this);
+    }
+
+    void show() const {
+        cout << "(" << x << ", " << y << ")";
     }
 };
 
@@ -88,10 +96,13 @@ struct Edge {
             f2 = f;
     }
 
-    void flip() {
-        // check and flip if needed
-        // TODO
+    void flip();
+
+    bool is_inf() const {
+        return !u || !v;
     }
+
+    void show() const;
 };
 
 struct Face {
@@ -134,7 +145,7 @@ struct Face {
         e3->erase_face(this);
     }
 
-    pair<Edge*, Edge*> get_two_others(Edge *e) {
+    pair<Edge*, Edge*> get_two_other_edges(Edge *e) {
         if (e == e1)
             return make_pair(e2, e3);
         else if(e == e2)
@@ -143,6 +154,17 @@ struct Face {
             return make_pair(e1, e2);
         else
             assert(false);
+    }
+
+    Node *get_one_other_node(Node *u, Node *v) {
+        for (Node *x : get_nodes())
+            if (x != u && x != v)
+                return x;
+        return 0;
+    }
+
+    bool is_inf() const {
+        return e1->is_inf() || e2->is_inf() || e3->is_inf();
     }
 };
 
@@ -155,19 +177,19 @@ struct Node {
 
     Node() = default;
 
-    Node(const pt &p, int id) : p(p), id(id) {}
+    Node(const pt &_p, int _id) : p(_p), id(_id) {}
 
-    bool isOn(Edge *e) const {
+    bool isOnEdge(Edge *e) const {
         if (!e)
             return false;
 
         if (!e->u || !e->v)
             return false; // nothing is lying on edge (*, inf)
 
-        return p.isOn(e->u->p, e->v->p);
+        return p.isOnSegment(e->u->p, e->v->p);
     }
 
-    bool isIn(Face *f, bool strictly = false) const {
+    bool isInFace(Face *f, bool strictly = false) const {
         if (!f)
             return false;
 
@@ -176,10 +198,10 @@ struct Node {
             if (v)
                 points.push_back(v->p);
             else
-                return true;
+                return true; // !!!
         }
 
-        return p.isIn(std::vector<pt>(points), strictly);
+        return p.isInPolygon(std::vector<pt>(points), strictly);
     }
 
     void insert_edge(Edge *e) {
@@ -192,7 +214,7 @@ struct Node {
 };
 
 /// Connect all important links
-void create_face(Face *f, Edge *e1, Edge *e2, Edge *e3) {
+void create_face_links(Face *f, Edge *e1, Edge *e2, Edge *e3) {
     e1->insert_face(f);
     e2->insert_face(f);
     e3->insert_face(f);
@@ -202,18 +224,95 @@ void create_face(Face *f, Edge *e1, Edge *e2, Edge *e3) {
     f->e3 = e3;
 }
 
-void create_edge(Edge *e) {
+void create_edge_links(Edge *e) {
     if (e->u)
         e->u->insert_edge(e);
     if (e->v)
         e->v->insert_edge(e);
 }
 
-void destroy_edge(Edge *e) {
+void destroy_edge_links(Edge *e) {
     if (e->u)
         e->u->erase_edge(e);
     if (e->v)
         e->v->erase_edge(e);
+}
+
+void Edge::flip() {
+    // TODO: what to do with inf?
+    // now, we can consider that edge connected to the inf is good
+    // but we should add points from convex hull first
+    if (is_inf())
+        return;
+    Node *A = f1->get_one_other_node(u, v);
+    Node *B = f1->get_one_other_node(u, v);
+    if (!A || !B)
+        return;
+
+    ld vc_a = abs((u->p - A->p).vector_mul(v->p - A->p));
+    ld sc_a = (u->p - A->p).scalar_mul(v->p - A->p);
+
+    ld vc_b = abs((u->p - B->p).vector_mul(v->p - B->p));
+    ld sc_b = (u->p - B->p).scalar_mul(v->p - B->p);
+
+    if (vc_a * sc_b + sc_a * vc_b >= 0) // sin(alpha + beta) >= 0
+        return;
+
+    Edge *z1, *z2, *z3, *z4;
+
+    z1 = f1->get_edge(u, A);
+    z2 = f1->get_edge(v, A);
+    z3 = f1->get_edge(u, B);
+    z4 = f1->get_edge(v, B);
+
+    f1->erase_me_from_edges();
+    f2->erase_me_from_edges();
+
+    destroy_edge_links(this);
+    u = A;
+    v = B;
+    create_edge_links(this);
+
+    create_face_links(f1, z1, z3, this);
+    create_face_links(f2, z2, z4, this);
+
+    z1->flip();
+    z2->flip();
+    z3->flip();
+    z4->flip();
+}
+
+void Edge::show() const {
+    if (u) u->p.show();
+    else cout << "inf";
+    cout << " ";
+    if (v) v->p.show();
+    else cout << "inf";
+    cout << "\n";
+}
+
+void show(Node *v) {
+    if (!v)
+        return;
+    unordered_set<Node*> used;
+    queue<Node*> q;
+
+    used.insert(v);
+    q.push(v);
+
+    while (!q.empty()) {
+        v = q.front();
+        q.pop();
+        for (Edge *e : v->edges) {
+            Node *to = e->to(v);
+            e->show();
+            if (!to || used.count(to)) {
+                continue;
+            }
+            used.insert(to);
+            q.push(to);
+        }
+    }
 }
 
 /// there should not be two equal points at the same time
@@ -221,8 +320,7 @@ void destroy_edge(Edge *e) {
 ///
 /// probability for node to be pushed to the upper layer
 void build_delanay(const vector<pt> &ps, double probability = 0.5) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen(42);
     std::uniform_real_distribution<> dis(0.0, 1.0);
 
     int n = (int) ps.size();
@@ -256,8 +354,12 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
                     Face *f1 = new Face();
                     Face *f2 = new Face();
 
-                    create_face(f1, e1, e2, edge);
-                    create_face(f2, e1, e2, edge);
+                    create_edge_links(e1);
+                    create_edge_links(e2);
+                    create_edge_links(edge);
+
+                    create_face_links(f1, e1, e2, edge);
+                    create_face_links(f2, e1, e2, edge);
                 } else {
                     // how to find face? TODO
 
@@ -265,17 +367,17 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
 
                     for (Node *v : layers[j]) {
                         for (Edge *e : v->edges) {
-                            if (node->isIn(e->f1))
-                                face = e->f1;
-                            if (node->isIn(e->f2))
-                                face = e->f2;
+                            if (node->isInFace(e->f1)) face = e->f1;
+                            if (node->isInFace(e->f2)) face = e->f2;
+                            if (face && !face->is_inf()) break;
                         }
+                        if (face && !face->is_inf()) break;
                     }
 
                     assert(face);
 
                     // TODO
-                    if (node->isIn(face, true)) {
+                    if (node->isInFace(face, true)) { // strictly inside
                         // insert in triangle
 
                         vector<Node*> vs = face->get_nodes();
@@ -302,27 +404,28 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
                         t2->erase_face(face);
                         t3->erase_face(face);
 
-                        create_edge(e1);
-                        create_edge(e2);
-                        create_edge(e3);
+                        create_edge_links(e1);
+                        create_edge_links(e2);
+                        create_edge_links(e3);
 
-                        create_face(f1, e1, e2, t1);
-                        create_face(f2, e2, e3, t2);
-                        create_face(f3, e1, e3, t3);
+                        create_face_links(f1, e1, e2, t1);
+                        create_face_links(f2, e2, e3, t2);
+                        create_face_links(f3, e1, e3, t3);
 
                         t1->flip();
                         t2->flip();
                         t3->flip();
                     } else {
                         // insert in edge
+                        // we assume that insertion point is strictly inside the edge
 
                         Edge *e = 0;
 
-                        if (node->isOn(face->e1))
+                        if (node->isOnEdge(face->e1))
                             e = face->e1;
-                        else if (node->isOn(face->e2))
+                        else if (node->isOnEdge(face->e2))
                             e = face->e2;
-                        else if (node->isOn(face->e3))
+                        else if (node->isOnEdge(face->e3))
                             e = face->e3;
 
                         assert(e);
@@ -333,17 +436,14 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
                         assert(f1);
                         assert(f2);
 
+                        Edge *z1, *z2, *z3, *z4;
+                        tie(z1, z2) = f1->get_two_other_edges(e);
+                        tie(z3, z4) = f2->get_two_other_edges(e);
+
                         Edge *g = new Edge{node, e->v, 0, 0};
 
-                        Node *A, *B;
-                        for (Node *x : f1->get_nodes()) {
-                            if (x != e->u && x != e->v)
-                                A = x;
-                        }
-                        for (Node *x : f2->get_nodes()) {
-                            if (x != e->u && x != e->v)
-                                B = x;
-                        }
+                        Node *A = f1->get_one_other_node(e->u, e->v);
+                        Node *B = f2->get_one_other_node(e->u, e->v);
 
                         f1->erase_me_from_edges();
                         f2->erase_me_from_edges();
@@ -354,23 +454,18 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
                         Edge *t1 = new Edge{node, A};
                         Edge *t2 = new Edge{node, B};
 
-                        create_edge(t1);
-                        create_edge(t2);
+                        create_edge_links(t1);
+                        create_edge_links(t2);
 
-                        destroy_edge(e);
+                        destroy_edge_links(e);
                         e->v = node;
-                        create_edge(e);
-                        create_edge(g);
+                        create_edge_links(e);
+                        create_edge_links(g);
 
-                        Edge *z1, *z2, *z3, *z4;
-
-                        tie(z1, z2) = f1->get_two_others(e);
-                        tie(z3, z4) = f2->get_two_others(e);
-
-                        create_face(f1, z1, e, t1);
-                        create_face(f3, z2, g, t1);
-                        create_face(f2, z3, e, t2);
-                        create_face(f4, z4, g, t2);
+                        create_face_links(f1, z1, e, t1);
+                        create_face_links(f3, z2, g, t1);
+                        create_face_links(f2, z3, e, t2);
+                        create_face_links(f4, z4, g, t2);
 
                         z1->flip();
                         z2->flip();
@@ -425,7 +520,17 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
         for (int j = 1; j < (int) added_nodes.size(); j++) {
             added_nodes[j]->down = added_nodes[j - 1];
         }
+
+        cout << "\n";
+        cout << "add " << i << "-th point\n";
+        cout << "layers = " << (int) layers.size() << "\n";
+        show(layers[0][0]);
+
+        if (i == 3)
+            exit(0);
     }
+
+    cout << "OK\n";
 }
 
 int main() {
@@ -443,8 +548,9 @@ int main() {
     vector<pt> p(n);
     for (int i = 0; i < n; i++) {
         cin >> p[i].x >> p[i].y;
-        // TODO: id
     }
+
+    build_delanay(p);
 
     return 0;
 }
