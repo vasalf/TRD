@@ -255,6 +255,8 @@ void Edge::flip() {
     ld vc_b = abs((u->p - B->p).vector_mul(v->p - B->p));
     ld sc_b = (u->p - B->p).scalar_mul(v->p - B->p);
 
+    // TODO: be careful with overflow
+    // ~ 8 * |X|^4, if |X| for example <= 3e4 => ok
     if (vc_a * sc_b + sc_a * vc_b >= 0) // sin(alpha + beta) >= 0
         return;
 
