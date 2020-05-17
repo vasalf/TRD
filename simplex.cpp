@@ -103,6 +103,11 @@ struct Simplex {
     void swap_primary_c() {
         swap(A[m], A[m + 1]);
     }
+
+    void flip_task_type() {
+        A[m] = ld(-1) * A[m];
+        A[m + 1] = ld(-1) * A[m + 1];
+    }
 };
 
 struct Response {
