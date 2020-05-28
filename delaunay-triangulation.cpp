@@ -17,6 +17,10 @@ struct Node;
 struct Face;
 struct Edge;
 
+int DX = 0; // dummy for debug
+
+vector<pair<ll, pii>> edges;
+
 struct pt {
     int x = 0, y = 0, id = 0;
 
@@ -45,7 +49,6 @@ struct pt {
     }
 
     /// polygon should be defined with clockwise or counter-clockwise bypass
-    /// polygon should be strictly convex
     ///
     /// checks whether point lies in polygon
     bool inPolygon(const vector<pt> &polygon, bool strictly = false) const {
@@ -68,7 +71,8 @@ struct pt {
     }
 
     void show() const {
-        cout << "(" << x << ", " << y << ")";
+//        cout << "(" << id << ": " << x << ", " << y << ")";
+        cout << (x + DX) << " " << y;
     }
 };
 
@@ -102,7 +106,7 @@ struct Edge {
         return !u || !v;
     }
 
-    void show() const;
+    void visit() const;
 };
 
 struct Face {
@@ -255,9 +259,7 @@ void Edge::flip() {
     ld vc_b = abs((u->p - B->p).vector_mul(v->p - B->p));
     ld sc_b = (u->p - B->p).scalar_mul(v->p - B->p);
 
-    // TODO: be careful with overflow
-    // ~ 8 * |X|^4, if |X| for example <= 3e4 => ok
-    if (vc_a * sc_b + sc_a * vc_b >= 0) // sin(alpha + beta) >= 0
+    if (vc_a * sc_b + sc_a * vc_b >= 0) // sin(alpha + beta) >= 0, OVERFLOWING, but long double should does job
         return;
 
     Edge *z1, *z2, *z3, *z4;
@@ -287,16 +289,20 @@ void Edge::flip() {
     z4->flip();
 }
 
-void Edge::show() const {
-    if (u) u->p.show();
-    else cout << "inf";
-    cout << " ";
-    if (v) v->p.show();
-    else cout << "inf";
-    cout << "\n";
+void Edge::visit() const {
+//    if (u) u->p.visit();
+//    else cout << "inf";
+//    cout << " ";
+//    if (v) v->p.visit();
+//    else cout << "inf";
+//    cout << "\n";
+    if (u && v) {
+        ll dist = (u->p - v->p).sqr_norm();
+        edges.push_back({dist, {u->p.id, v->p.id}});
+    }
 }
 
-void show(Node *v) {
+void visit(Node *v) {
     if (!v)
         return;
     unordered_set<Node*> used;
@@ -310,7 +316,8 @@ void show(Node *v) {
         q.pop();
         for (Edge *e : v->edges) {
             Node *to = e->to(v);
-            e->show();
+            if (!e->is_inf())
+                e->visit();
             if (!to || used.count(to)) {
                 continue;
             }
@@ -323,8 +330,8 @@ void show(Node *v) {
 struct Delaunay {
     vector<vector<Node*>> layers; // localization structure
 
-    // hull should be in clockwise or in counter-clockwise order, has at least three points and strictly positivea area
-    void add_convex_hull(int j, const vector<pt> &hull) {
+    // hull should be in clockwise or in counter-clockwise order, has at least three points and strictly positive area
+    vector<Node*> add_convex_hull(int j, const vector<pt> &hull) {
         int n = (int) hull.size();
         assert(n >= 3);
         Edge *last_edge = 0;
@@ -364,15 +371,16 @@ struct Delaunay {
             create_edge_links(inf_edges[i]);
         }
         for (int i = 0; i < n; i++) {
-            int j = (i + 1) % n;
+            int ii = (i + 1) % n;
             Face *f = new Face();
-            create_face_links(f, inf_edges[i], inf_edges[j], edges[i]);
+            create_face_links(f, inf_edges[i], inf_edges[ii], edges[i]);
         }
         while ((int) layers.size() <= j)
             layers.emplace_back();
         layers[j].clear();
         for (int i = 0; i < n; i++)
             layers[j].push_back(nodes[i]);
+        return nodes;
     }
 
     void add_point_into_face(Node *node, Face *face) {
@@ -431,6 +439,11 @@ struct Delaunay {
         tie(z1, z2) = f1->get_two_other_edges(e);
         tie(z3, z4) = f2->get_two_other_edges(e);
 
+        if (z1->u != e->u && z1->v != e->u)
+            swap(z1, z2);
+        if (z3->u != e->u && z3->v != e->u)
+            swap(z3, z4);
+
         Edge *g = new Edge{node, e->v, 0, 0};
 
         Node *A = f1->get_one_other_node(e->u, e->v);
@@ -468,53 +481,34 @@ struct Delaunay {
     Node* add_point_into_layer(const pt &q, int j) {
         // find face, insert and flip
         Node *node = new Node(q);
-        if (layers[j].size() == 1) { // extreme case
-            Node *second_node = layers[j][0];
 
-            Edge *e1 = new Edge{node, 0, 0, 0};
-            Edge *e2 = new Edge{second_node, 0, 0, 0};
-            Edge *edge = new Edge{node, second_node, 0, 0};
-
-            Face *f1 = new Face();
-            Face *f2 = new Face();
-
-            create_edge_links(e1);
-            create_edge_links(e2);
-            create_edge_links(edge);
-
-            create_face_links(f1, e1, e2, edge);
-            create_face_links(f2, e1, e2, edge);
-        } else {
-            // how to find face? TODO
-
-            Face *face = 0;
-
-            for (Node *v : layers[j]) {
-                for (Edge *e : v->edges) {
-                    if (node->inFace(e->f1)) face = e->f1;
-                    if (node->inFace(e->f2)) face = e->f2;
-                    if (face && !face->is_inf()) break;
-                }
-                if (face && !face->is_inf()) break;
+        // how to find face? TODO
+        Face *face = 0;
+        for (Node *v : layers[j]) {
+            for (Edge *e : v->edges) {
+                if (node->inFace(e->f1)) face = e->f1;
+                if (node->inFace(e->f2)) face = e->f2;
+                if (face) break;
             }
-
-            assert(face);
-
-            if (node->inFace(face, true)) { // strictly inside
-                add_point_into_face(node, face);
-            } else {
-                Edge *e = 0;
-
-                if (node->onEdge(face->e1))
-                    e = face->e1;
-                else if (node->onEdge(face->e2))
-                    e = face->e2;
-                else if (node->onEdge(face->e3))
-                    e = face->e3;
-
-                add_point_into_edge(node, e);
-            }
+            if (face) break;
         }
+        assert(face);
+
+        if (node->inFace(face, true)) { // strictly inside
+            add_point_into_face(node, face);
+        } else {
+            Edge *e = 0;
+
+            if (node->onEdge(face->e1))
+                e = face->e1;
+            else if (node->onEdge(face->e2))
+                e = face->e2;
+            else if (node->onEdge(face->e3))
+                e = face->e3;
+
+            add_point_into_edge(node, e);
+        }
+
         layers[j].push_back(node);
         return node;
     }
@@ -523,7 +517,7 @@ struct Delaunay {
         if (!nearest_node) {
             for (Node *candidate : layers.back()) {
                 ll candidate_dist = (candidate->p - q).sqr_norm();
-                if (candidate_dist < nearest_dist) {
+                if (0 < candidate_dist && candidate_dist < nearest_dist) {
                     nearest_dist = candidate_dist;
                     nearest_node = candidate;
                 }
@@ -535,8 +529,10 @@ struct Delaunay {
                 Node *best_node = nearest_node;
                 for (const Edge *edge : nearest_node->edges) {
                     Node *candidate = edge->to(nearest_node);
+                    if (!candidate)
+                        continue;
                     ll candidate_dist = (candidate->p - q).sqr_norm();
-                    if (candidate_dist < best_dist) {
+                    if (0 < candidate_dist && candidate_dist < best_dist) {
                         best_dist = candidate_dist;
                         best_node = candidate;
                     }
@@ -549,7 +545,8 @@ struct Delaunay {
         }
     }
 
-    void add_point(const pt &q, int n_layers) {
+    /// returns the highest node
+    Node* add_point(const pt &q, int n_layers) {
         Node *nearest_node = 0;
         ll nearest_dist = 4 * inf64;
 
@@ -557,33 +554,33 @@ struct Delaunay {
 
         for (int j = (int) layers.size() - 1; j >= 0; j--) {
             if (j < n_layers) {
-                Node *node = add_point_into_layer(q, j);
+                Node *node = add_point_into_layer(q, j); /// TODO: nearest node dependency !!!
                 added_nodes.push_back(node);
             }
 
-            if (j > 0) { // let's go to the lower layer
-                update_nearest_node(q, nearest_node, nearest_dist);
-            }
+//            if (j > 0) { // let's go to the lower layer
+//                update_nearest_node(q, nearest_node, nearest_dist);
+//            }
         }
 
         reverse(added_nodes.begin(), added_nodes.end());
-
-        // add layers with exactly one node if needed
-        while ((int) layers.size() < n_layers) {
-            Node *node = new Node(q);
-            layers.push_back({node});
-            added_nodes.push_back(node);
-        }
 
         // update links to the previous layers
         for (int j = 1; j < (int) added_nodes.size(); j++) {
             added_nodes[j]->down = added_nodes[j - 1];
         }
 
-        cout << "\n";
-        cout << "add " << q.id << " point\n";
-        cout << "layers = " << (int) layers.size() << "\n";
-        show(layers[0][0]);
+        return added_nodes.back();
+    }
+
+    void push_links_down() {
+        unordered_map<int, Node*> last_link;
+        for (int j = 0; j < (int) layers.size(); j++) {
+            for (Node *node : layers[j]) {
+                node->down = last_link[node->p.id];
+                last_link[node->p.id] = node;
+            }
+        }
     }
 };
 
@@ -610,11 +607,22 @@ vector<int> build_convex_hull(const vector<pt> &ps) {
         return v1.sqr_norm() < v2.sqr_norm();
     });
     vector<int> st = {h[0]};
+    int nn = -1;
     for (int iter = 1; iter < n; iter++) {
         int i = h[iter];
+        const pt &p1 = ps[i];
+        const pt &p2 = ps[h[n - 1]];
+        if ((p1 - ps[h[0]]).vector_mul(p2 - ps[h[0]]) == 0) {
+            nn = iter;
+            break;
+        }
+    }
+    reverse(h.begin() + nn,  h.end());
+    for (int iter = 1; iter <= nn; iter++) {
+        int i = h[iter];
         while ((int) st.size() >= 2) {
-            const pt &p1 = ps[(int) st.size() - 2];
-            const pt &p2 = ps[(int) st.size() - 1];
+            const pt &p1 = ps[st[(int) st.size() - 2]];
+            const pt &p2 = ps[st[(int) st.size() - 1]];
             const pt &p3 = ps[i];
             if ((p3 - p2).vector_mul(p1 - p2) >= 0)
                 break;
@@ -622,6 +630,10 @@ vector<int> build_convex_hull(const vector<pt> &ps) {
         }
         st.push_back(i);
     }
+    for (int iter = nn + 1; iter < n; iter++)
+        st.push_back(h[iter]);
+    st.insert(st.begin(), st.back());
+    st.pop_back();
     return st;
 }
 
@@ -630,18 +642,92 @@ vector<int> build_convex_hull(const vector<pt> &ps) {
 /// convex hull of points should have positive area
 ///
 /// probability for node to be pushed to the upper layer
+///
+/// let n be the number of points then ids should be in integers in [0, n)
 void build_delanay(const vector<pt> &ps, double probability = 0.5) {
     std::mt19937 gen(42);
-    std::uniform_real_distribution<> dis(0.0, 1.0)
-
+    std::uniform_real_distribution<> dis(0.0, 1.0);
     Delaunay delaunay;
-//    for (const pt &q : ps) {
-//        delaunay.add_point(q);
+
+    int n = (int) ps.size();
+    vector<int> n_layers(n);
+    vector<vector<pt>> layers;
+
+    for (int i = 0; i < n; i++) {
+        n_layers[ps[i].id] = 1;
+        while (dis(gen) < probability)
+            n_layers[ps[i].id]++;
+        while ((int) layers.size() < n_layers[ps[i].id])
+            layers.emplace_back();
+        for (int j = 0; j < n_layers[ps[i].id]; j++)
+            layers[j].push_back(ps[i]);
+    }
+
+    while ((int) layers.back().size() <= 2) {
+        for (const pt &q : layers.back())
+            n_layers[q.id]--;
+        layers.pop_back();
+    }
+
+    vector<Node*> downest_link_among_convex_hulls(n);
+
+    for (int j = (int) layers.size() - 1; j >= 0; j--) {
+        vector<int> hull = build_convex_hull(layers[j]);
+        for (int i : hull)
+            n_layers[layers[j][i].id]--;
+        vector<pt> hull_pts(hull.size());
+        for (int it = 0; it < (int) hull.size(); it++)
+            hull_pts[it] = layers[j][hull[it]];
+        vector<Node*> helper = delaunay.add_convex_hull(j, hull_pts);
+        for (int i = 0; i < (int) helper.size(); i++) {
+            downest_link_among_convex_hulls[helper[i]->p.id] = helper[i];
+        }
+    }
+    delaunay.push_links_down();
+
+    // TODO: insert points from convex hulls into down layers
+
+    for (int i = 0; i < n; i++) {
+        if (n_layers[ps[i].id] == 0)
+            continue;
+        Node *top = delaunay.add_point(ps[i], n_layers[ps[i].id]);
+        if (downest_link_among_convex_hulls[ps[i].id]) {
+            downest_link_among_convex_hulls[ps[i].id]->down = top;
+        }
+    }
+
+    visit(delaunay.layers[0][0]);
+//    for (int j = 0; j < (int) layers.size(); j++) {
+//        visit(delaunay.layers[j][0]);
+//        DX += 50;
+//        break;
 //    }
-    delaunay.add_convex_hull(0, ps);
-    show(delaunay.layers[0][0]);
-    cout << "OK\n";
 }
+
+struct DSU {
+    int n; // [0, n)
+    vector<int> p;
+
+    DSU(int nn) {
+        n = nn;
+        p.resize(n);
+        for (int i = 0; i < n; i++)
+            p[i] = i;
+    }
+
+    int find(int x) {
+        return x == p[x] ? x : find(p[x]);
+    }
+
+    bool merge(int x, int y) {
+        x = find(x);
+        y = find(y);
+        if (x == y)
+            return false;
+        p[x] = y;
+        return true;
+    }
+};
 
 int main() {
 
@@ -662,6 +748,31 @@ int main() {
     }
 
     build_delanay(p);
+
+    sort(edges.begin(), edges.end());
+
+    DSU dsu(n);
+
+    ld res = 0;
+    vector<pii> es;
+
+    for (auto p : edges) {
+        int u, v;
+        tie(u, v) = p.second;
+        if (dsu.merge(u, v)) {
+            res += sqrt(p.first);
+            es.push_back({u, v});
+        }
+    }
+
+    cout.precision(20);
+    cout << fixed;
+
+    cout << res << "\n";
+
+    for (auto p : es) {
+        cout << p.first + 1 << " " << p.second + 1 << "\n";
+    }
 
     return 0;
 }
