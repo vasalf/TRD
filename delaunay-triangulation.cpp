@@ -1,3 +1,4 @@
+#include "optimization.h"
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -20,6 +21,7 @@ struct Edge;
 int DX = 0; // dummy for debug
 
 vector<pair<ll, pii>> edges;
+std::mt19937 gen(42);
 
 struct pt {
     int x = 0, y = 0, id = 0;
@@ -182,7 +184,7 @@ struct Node {
 
     Node(const pt &_p) : p(_p) {}
 
-    bool onEdge(Edge *e) const {
+    bool onEdge(const Edge *e) const {
         if (!e)
             return false;
 
@@ -299,31 +301,6 @@ void Edge::visit() const {
     if (u && v) {
         ll dist = (u->p - v->p).sqr_norm();
         edges.push_back({dist, {u->p.id, v->p.id}});
-    }
-}
-
-void visit(Node *v) {
-    if (!v)
-        return;
-    unordered_set<Node*> used;
-    queue<Node*> q;
-
-    used.insert(v);
-    q.push(v);
-
-    while (!q.empty()) {
-        v = q.front();
-        q.pop();
-        for (Edge *e : v->edges) {
-            Node *to = e->to(v);
-            if (!e->is_inf())
-                e->visit();
-            if (!to || used.count(to)) {
-                continue;
-            }
-            used.insert(to);
-            q.push(to);
-        }
     }
 }
 
@@ -477,22 +454,35 @@ struct Delaunay {
         z4->flip();
     }
 
+    Face *find_face(int j, Node *nearest_node, Node *node) {
+//        int tmp = 0;
+        while (1) {
+            Node *v = 0;
+            for (const Edge *edge : nearest_node->edges) {
+                if (edge->f1 && node->inFace(edge->f1))
+                    return edge->f1;
+                if (edge->f2 && node->inFace(edge->f2))
+                    return edge->f2;
+                Node *to = edge->to(nearest_node);
+                if (!to)
+                    continue;
+                if ((node->p - nearest_node->p).vector_mul(to->p - nearest_node->p) < 0) {
+                    if (!v || (to->p - nearest_node->p).vector_mul(v->p - nearest_node->p) < 0)
+                        v = to;
+                }
+            }
+            nearest_node = v;
+//            tmp++;
+//            if (tmp > 2)
+//                cout << "find face steps: " << tmp << "\n";
+        }
+    }
+
     // point should be inside the convex hull of all points which will be added
-    Node* add_point_into_layer(const pt &q, int j) {
+    Node* add_point_into_layer(const pt &q, int j, Node *nearest_node) {
         // find face, insert and flip
         Node *node = new Node(q);
-
-        // how to find face? TODO
-        Face *face = 0;
-        for (Node *v : layers[j]) {
-            for (Edge *e : v->edges) {
-                if (node->inFace(e->f1)) face = e->f1;
-                if (node->inFace(e->f2)) face = e->f2;
-                if (face) break;
-            }
-            if (face) break;
-        }
-        assert(face);
+        Face *face = find_face(j, nearest_node, node);
 
         if (node->inFace(face, true)) { // strictly inside
             add_point_into_face(node, face);
@@ -513,36 +503,46 @@ struct Delaunay {
         return node;
     }
 
-    void update_nearest_node(const pt &q, Node *& nearest_node, ll &nearest_dist) {
-        if (!nearest_node) {
-            for (Node *candidate : layers.back()) {
-                ll candidate_dist = (candidate->p - q).sqr_norm();
-                if (0 < candidate_dist && candidate_dist < nearest_dist) {
-                    nearest_dist = candidate_dist;
-                    nearest_node = candidate;
-                }
-            }
-        } else {
-            nearest_node = nearest_node->down;
-            while (1) {
-                ll best_dist = nearest_dist;
-                Node *best_node = nearest_node;
-                for (const Edge *edge : nearest_node->edges) {
-                    Node *candidate = edge->to(nearest_node);
-                    if (!candidate)
-                        continue;
-                    ll candidate_dist = (candidate->p - q).sqr_norm();
-                    if (0 < candidate_dist && candidate_dist < best_dist) {
-                        best_dist = candidate_dist;
-                        best_node = candidate;
-                    }
-                }
-                if (nearest_node == best_node)
-                    break;
-                nearest_dist = best_dist;
-                nearest_node = best_node;
-            }
+    void update_nearest_node(int j, const pt &q, Node *& nearest_node) {
+//        int tmp = 0;
+//        Node *start = nearest_node;
+        while (!nearest_node->down) {
+            int i = gen() % (int) nearest_node->edges.size();
+            if (i < 0) i += (int) nearest_node->edges.size();
+            auto it = nearest_node->edges.begin();
+            while (i--) it++;
+            const Edge *edge = *it;
+            Node *to = edge->to(nearest_node);
+            if (to)
+                nearest_node = to;
+//            tmp++;
         }
+//        if (tmp > 5)
+//            cout << "update steps: " << tmp << "\n";
+        nearest_node = nearest_node->down;
+        ll nearest_dist = (nearest_node->p - q).sqr_norm();
+//        tmp = 0;
+        while (1) {
+            ll best_dist = nearest_dist;
+            Node *best_node = nearest_node;
+            for (const Edge *edge : nearest_node->edges) {
+                Node *candidate = edge->to(nearest_node);
+                if (!candidate)
+                    continue;
+                ll candidate_dist = (candidate->p - q).sqr_norm();
+                if (candidate_dist < best_dist) {
+                    best_dist = candidate_dist;
+                    best_node = candidate;
+                }
+            }
+            if (nearest_node == best_node)
+                break;
+            nearest_dist = best_dist;
+            nearest_node = best_node;
+//            tmp++;
+        }
+//        if (tmp > 4)
+//            cout << "find nearest steps: " << tmp << "\n";
     }
 
     /// returns the highest node
@@ -552,15 +552,23 @@ struct Delaunay {
 
         vector<Node*> added_nodes;
 
+        for (Node *candidate : layers.back()) {
+            ll candidate_dist = (candidate->p - q).sqr_norm();
+            if (candidate_dist < nearest_dist) {
+                nearest_dist = candidate_dist;
+                nearest_node = candidate;
+            }
+        }
+
         for (int j = (int) layers.size() - 1; j >= 0; j--) {
             if (j < n_layers) {
-                Node *node = add_point_into_layer(q, j); /// TODO: nearest node dependency !!!
+                Node *node = add_point_into_layer(q, j, nearest_node);
                 added_nodes.push_back(node);
             }
 
-//            if (j > 0) { // let's go to the lower layer
-//                update_nearest_node(q, nearest_node, nearest_dist);
-//            }
+            if (j > 0) { // let's go to the lower layer
+                update_nearest_node(j, q, nearest_node);
+            }
         }
 
         reverse(added_nodes.begin(), added_nodes.end());
@@ -645,7 +653,6 @@ vector<int> build_convex_hull(const vector<pt> &ps) {
 ///
 /// let n be the number of points then ids should be in integers in [0, n)
 void build_delanay(const vector<pt> &ps, double probability = 0.5) {
-    std::mt19937 gen(42);
     std::uniform_real_distribution<> dis(0.0, 1.0);
     Delaunay delaunay;
 
@@ -685,10 +692,10 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
     }
     delaunay.push_links_down();
 
-    // TODO: insert points from convex hulls into down layers
-
     for (int i = 0; i < n; i++) {
         if (n_layers[ps[i].id] == 0)
+            continue;
+        if (downest_link_among_convex_hulls[ps[i].id] == 0)
             continue;
         Node *top = delaunay.add_point(ps[i], n_layers[ps[i].id]);
         if (downest_link_among_convex_hulls[ps[i].id]) {
@@ -696,7 +703,23 @@ void build_delanay(const vector<pt> &ps, double probability = 0.5) {
         }
     }
 
-    visit(delaunay.layers[0][0]);
+    for (int i = 0; i < n; i++) {
+        if (n_layers[ps[i].id] == 0)
+            continue;
+        if (downest_link_among_convex_hulls[ps[i].id] != 0)
+            continue;
+        Node *top = delaunay.add_point(ps[i], n_layers[ps[i].id]);
+        if (downest_link_among_convex_hulls[ps[i].id]) {
+            downest_link_among_convex_hulls[ps[i].id]->down = top;
+        }
+    }
+
+    for (Node *v : delaunay.layers[0]) {
+        for (Edge *edge : v->edges) {
+            if (!edge->is_inf() && edge->u == v)
+                edge->visit();
+        }
+    }
 //    for (int j = 0; j < (int) layers.size(); j++) {
 //        visit(delaunay.layers[j][0]);
 //        DX += 50;
@@ -735,15 +758,18 @@ int main() {
     freopen("input.txt", "r", stdin);
 #endif
 
-    ios_base::sync_with_stdio(0);
-    cin.tie(0);
+//    ios_base::sync_with_stdio(0);
+//    cin.tie(0);
 
     int n;
-    cin >> n;
+//    cin >> n;
+    n = readInt();
 
     vector<pt> p(n);
     for (int i = 0; i < n; i++) {
-        cin >> p[i].x >> p[i].y;
+//        cin >> p[i].x >> p[i].y;
+        p[i].x = readInt();
+        p[i].y = readInt();
         p[i].id = i;
     }
 
@@ -765,14 +791,18 @@ int main() {
         }
     }
 
-    cout.precision(20);
-    cout << fixed;
+//    cout.precision(20);
+//    cout << fixed;
 
-    cout << res << "\n";
-
-    for (auto p : es) {
-        cout << p.first + 1 << " " << p.second + 1 << "\n";
-    }
+//    cout << res << "\n";
+//    writeDouble(res, 20);
+//    writeChar('\n');
+//
+//    for (auto t : es) {
+////        cout << t.first + 1 << " " << t.second + 1 << "\n";
+//        writeInt(t.first + 1, ' ');
+//        writeInt(t.second + 1, '\n');
+//    }
 
     return 0;
 }
