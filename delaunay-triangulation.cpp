@@ -773,7 +773,7 @@ int main() {
         p[i].id = i;
     }
 
-    build_delanay(p); // PROBABILITY CAN BE ADJUSTED FOR BETTER PERFOMANCE
+    build_delanay(p); // PROBABILITY CAN BE ADJUSTED FOR BETTER PERFORMANCE
 
     sort(edges.begin(), edges.end());
 
