@@ -1,3 +1,5 @@
+
+
 #include "optimization.h"
 #include <bits/stdc++.h>
 
@@ -102,6 +104,13 @@ struct Edge {
             f2 = f;
     }
 
+    void change_face(Face *was, Face *will) {
+        if (f1 == was)
+            f1 = will;
+        else
+            f2 = will;
+    }
+
     void flip();
 
     bool is_inf() const {
@@ -111,24 +120,33 @@ struct Edge {
     void visit() const;
 };
 
+Node* buff[6];
+int TT, QQ;
+
 struct Face {
     Edge *e1;
     Edge *e2;
     Edge *e3;
 
     vector<Node*> get_nodes() const {
-        unordered_set<Node*> nodes;
+        buff[0] = e1->u;
+        buff[1] = e1->v;
+        buff[2] = e2->u;
+        buff[3] = e2->v;
+        buff[4] = e3->u;
+        buff[5] = e3->v;
+        sort(buff, buff + 6);
+        TT = unique(buff, buff + 6) - buff;
+        return vector<Node*>(buff, buff + TT);
+    }
 
-        nodes.insert(e1->u);
-        nodes.insert(e1->v);
-
-        nodes.insert(e2->u);
-        nodes.insert(e2->v);
-
-        nodes.insert(e3->u);
-        nodes.insert(e3->v);
-
-        return vector<Node*>(nodes.begin(), nodes.end());
+    void change_edge(Edge *was, Edge *will) {
+        if (e1 == was)
+            e1 = will;
+        else if (e2 == was)
+            e2 = will;
+        else
+            e3 = will;
     }
 
     static bool check_edge(const Edge *e, Node *u, Node *v) {
@@ -271,19 +289,19 @@ void Edge::flip() {
     z3 = f2->get_edge(u, B);
     z4 = f2->get_edge(v, B);
 
-    Face *mem1 = f1;
-    Face *mem2 = f2;
+    f1->change_edge(z2, z3);
+    f2->change_edge(z3, z2);
 
-    f1->erase_me_from_edges();
-    f2->erase_me_from_edges();
+    z2->change_face(f1, f2);
+    z3->change_face(f2, f1);
 
-    destroy_edge_links(this);
+    u->erase_edge(this);
+    v->erase_edge(this);
+    A->insert_edge(this);
+    B->insert_edge(this);
+
     u = A;
     v = B;
-    create_edge_links(this);
-
-    create_face_links(mem1, z1, z3, this);
-    create_face_links(mem2, z2, z4, this);
 
     z1->flip();
     z2->flip();
@@ -504,24 +522,11 @@ struct Delaunay {
     }
 
     void update_nearest_node(int j, const pt &q, Node *& nearest_node) {
-//        int tmp = 0;
-//        Node *start = nearest_node;
-        while (!nearest_node->down) {
-            int i = gen() % (int) nearest_node->edges.size();
-            if (i < 0) i += (int) nearest_node->edges.size();
-            auto it = nearest_node->edges.begin();
-            while (i--) it++;
-            const Edge *edge = *it;
-            Node *to = edge->to(nearest_node);
-            if (to)
-                nearest_node = to;
-//            tmp++;
-        }
-//        if (tmp > 5)
-//            cout << "update steps: " << tmp << "\n";
-        nearest_node = nearest_node->down;
+        if (nearest_node->down)
+            nearest_node = nearest_node->down;
+        else
+            nearest_node = layers[j - 1].front();
         ll nearest_dist = (nearest_node->p - q).sqr_norm();
-//        tmp = 0;
         while (1) {
             ll best_dist = nearest_dist;
             Node *best_node = nearest_node;
@@ -773,7 +778,7 @@ int main() {
         p[i].id = i;
     }
 
-    build_delanay(p); // PROBABILITY CAN BE ADJUSTED FOR BETTER PERFORMANCE
+    build_delanay(p, n >= 40000 ? 0.02 : n >= 20000 ? 0.05 : 0.5);
 
     sort(edges.begin(), edges.end());
 
@@ -794,15 +799,14 @@ int main() {
 //    cout.precision(20);
 //    cout << fixed;
 
-//    cout << res << "\n";
-//    writeDouble(res, 20);
-//    writeChar('\n');
-//
-//    for (auto t : es) {
-////        cout << t.first + 1 << " " << t.second + 1 << "\n";
-//        writeInt(t.first + 1, ' ');
-//        writeInt(t.second + 1, '\n');
-//    }
+    writeDouble(res, 20);
+    writeChar('\n');
+
+    for (auto t : es) {
+//        cout << t.first + 1 << " " << t.second + 1 << "\n";
+        writeInt(t.first + 1, ' ');
+        writeInt(t.second + 1, '\n');
+    }
 
     return 0;
 }

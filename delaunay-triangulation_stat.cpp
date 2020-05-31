@@ -1,4 +1,3 @@
-#include "optimization.h"
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -22,6 +21,7 @@ vector<pair<ll, pii>> edges;
 std::mt19937 gen(42);
 
 const int N = 3.5e5 + 5;
+int FLAG = 0;
 
 struct pt {
     int x = 0, y = 0, id = 0;
@@ -336,8 +336,10 @@ void Edge::flip() {
 
     EDGES[z1].flip();
     EDGES[z2].flip();
-    EDGES[z3].flip();
-    EDGES[z4].flip();
+    if (!FLAG) {
+        EDGES[z3].flip();
+        EDGES[z4].flip();
+    }
 }
 
 void Edge::visit() const {
@@ -546,17 +548,10 @@ struct Delaunay {
     }
 
     void update_nearest_node(int j, const pt &q, int &nearest_node) {
-        while (NODES[nearest_node].down == -1) {
-            int i = gen() % (int) NODES[nearest_node].edges.size();
-            if (i < 0) i += (int) NODES[nearest_node].edges.size();
-            auto it = NODES[nearest_node].edges.begin();
-            while (i--) it++;
-            int edge = *it;
-            int to = EDGES[edge].to(nearest_node);
-            if (to != -1)
-                nearest_node = to;
-        }
-        nearest_node = NODES[nearest_node].down;
+        if (NODES[nearest_node].down != -1)
+            nearest_node = NODES[nearest_node].down;
+        else
+            nearest_node = layers[j - 1].front();
         ll nearest_dist = (NODES[nearest_node].p - q).sqr_norm();
         while (1) {
             ll best_dist = nearest_dist;
@@ -783,27 +778,20 @@ int main() {
     freopen("input.txt", "r", stdin);
 #endif
 
-//    ios_base::sync_with_stdio(0);
-//    cin.tie(0);
+    ios_base::sync_with_stdio(0);
+    cin.tie(0);
 
     int n;
-//    cin >> n;
-    n = readInt();
+    cin >> n;
 
     vector<pt> p(n);
     for (int i = 0; i < n; i++) {
-//        cin >> p[i].x >> p[i].y;
-        p[i].x = readInt();
-        p[i].y = readInt();
+        cin >> p[i].x >> p[i].y;
         p[i].id = i;
     }
 
 //    build_delanay(p, 0.2);
-    build_delanay(p, n <= 10000 ? 0.5 : n <= 30000 ? 0.05 : 0.01);
-
-//    writeInt(edges_sz, '\n');
-//    writeInt(faces_sz, '\n');
-//    writeInt(nodes_sz, '\n');
+    build_delanay(p, n <= 10000 ? 0.5 : n <= 30000 ? 0.05 : 0.1);
 
     sort(edges.begin(), edges.end());
 
@@ -821,18 +809,14 @@ int main() {
         }
     }
 
-//    cout.precision(20);
-//    cout << fixed;
+    cout.precision(20);
+    cout << fixed;
 
-    writeDouble(res, 20);
-    writeChar('\n');
+    cout << res << "\n";
 
     for (auto t : es) {
-//        cout << t.first + 1 << " " << t.second + 1 << "\n";
-        writeInt(t.first + 1, ' ');
-        writeInt(t.second + 1, '\n');
+        cout << t.first + 1 << " " << t.second + 1 << "\n";
     }
-
 
     return 0;
 }
