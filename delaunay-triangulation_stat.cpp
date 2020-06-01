@@ -21,7 +21,6 @@ vector<pair<ll, pii>> edges;
 std::mt19937 gen(42);
 
 const int N = 3.5e5 + 5;
-int FLAG = 0;
 
 struct pt {
     int x = 0, y = 0, id = 0;
@@ -336,10 +335,8 @@ void Edge::flip() {
 
     EDGES[z1].flip();
     EDGES[z2].flip();
-    if (!FLAG) {
-        EDGES[z3].flip();
-        EDGES[z4].flip();
-    }
+    EDGES[z3].flip();
+    EDGES[z4].flip();
 }
 
 void Edge::visit() const {

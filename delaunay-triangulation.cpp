@@ -20,8 +20,6 @@ struct Node;
 struct Face;
 struct Edge;
 
-int DX = 0; // dummy for debug
-
 vector<pair<ll, pii>> edges;
 std::mt19937 gen(42);
 
@@ -72,11 +70,6 @@ struct pt {
 
     ll sqr_norm() const {
         return this->scalar_mul(*this);
-    }
-
-    void show() const {
-//        cout << "(" << id << ": " << x << ", " << y << ")";
-        cout << (x + DX) << " " << y;
     }
 };
 
