@@ -59,7 +59,7 @@
 \def\down{\vspace*{\baselineskip}}
 \def\LINE{\vspace*{-1em}\noindent \underline{\hbox to 1\textwidth{{ } \hfil{ } \hfil{ } }}}
 
-\lhead{SPB HSE (Babushkin, Makhnev, Surkov)}
+\lhead{SPB HSE (Alferov, Makhnev, Surkov)}
 \chead{}
 \rhead{Page \thepage\t\ of \pageref*{LastPage}}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -1562,6 +1562,46 @@ ll rec(ll pos, ll lx, ll lc, ll rx, ll rc, ll coins) {
 ll euclid(ll nw_st, ll step, ll mod, ll bound) {return rec(nw_st, mod, 0, step, 1, bound);}
 \end{minted}
 
+\begin{minted}[frame=single]{c++}
+void fwht(ll* a, ll mod) { // any mod, len(a) = 2^LOG
+    ll f1, f2; // c[i^j] += a[i] * b[j] => fwht(a), fwht(b), c = a * b, fwht(c)
+    for (int len = 1; len < (1 << LOG); len <<= 1) {
+        for (int i = 0; i < (1 << LOG); i += 2 * len) {
+            for (int j = 0; j < len; j++) {
+                f1 = a[i + j] + a[i + j + len], f2 = a[i + j] - a[i + j + len];
+                if (f1 >= mod) f1 -= mod; if (f2 < 0) f2 += mod;
+                a[i + j] = f1, a[i + j + len] = f2;}}}}
+\end{minted}
+
+\begin{minted}[frame=single]{c++}
+const int X = 1.5e7;
+const int MEM_K = 20;
+const int MEM_N = 1e5;
+int d[X];
+vector<int> ps;
+int mem[MEM_K][MEM_N];
+void precalc() {
+    for (int p = 2; p < X; p++) {
+        if (!d[p])
+            ps.push_back(d[p] = p);
+        for (int x : ps) {
+            if (x > d[p] || x * p >= X) break;
+            d[x * p] = x;}
+        d[p] = d[p - 1] + (d[p] == p);}}
+ll rec(ll n, int k) {
+    if (n <= 1) return 0;
+    if (k == 0) return n - 1;
+    if (ps[k - 1] > n) return 0;
+    if (n < X && 1ll * ps[k] * ps[k] > n) return d[n] - k;
+    if (k < MEM_K && n < MEM_N && mem[k][n]) return mem[k][n] - 1;
+    ll res = rec(n, k - 1) - rec(n / ps[k - 1], k - 1) - 1;
+    if (k < MEM_K && n < MEM_N) mem[k][n] = res + 1;
+    return res;}
+ll get_cnt_primes(ll n) { // # primes on [1, n], n <= 10^11, 10 queries, ~500ms
+    ll m = 1; while (m * m < n) m++; assert(m <= n);
+    int k = d[m]; return k + rec(n, k);}
+\end{minted}
+
 \fbox{$d_i = v_i - \sum\limits_{j<i}\frac{\langle v_i, d_j\rangle}{\langle d_j, d_j\rangle}d_j$}
 \fbox{$\sum\limits_{k=1}^{n}\mu(k)\lfloor\frac n k\rfloor = 1$}
 \fbox{$g(n)=\sum\limits_{d|n}f(d) \Leftrightarrow f(n) = \sum\limits_{d|n}\mu(d)g(n/d)$}
@@ -1575,17 +1615,6 @@ ll euclid(ll nw_st, ll step, ll mod, ll bound) {return rec(nw_st, mod, 0, step, 
 \fbox{$\varphi(n)=\sum\limits_{d|n}d\cdot\mu(\frac n d)$}
 
 \fbox{$F(N) = \sum\limits_{n=1}^N\varphi(n) \Rightarrow F(N) = \frac{N(N+1)}2 - \sum\limits_{k=2}^{N}F(\lfloor\frac N k\rfloor)$}
-
-\begin{minted}[frame=single]{c++}
-void fwht(ll* a, ll mod) { // any mod, len(a) = 2^LOG
-    ll f1, f2; // c[i^j] += a[i] * b[j] => fwht(a), fwht(b), c = a * b, fwht(c)
-    for (int len = 1; len < (1 << LOG); len <<= 1) {
-        for (int i = 0; i < (1 << LOG); i += 2 * len) {
-            for (int j = 0; j < len; j++) {
-                f1 = a[i + j] + a[i + j + len], f2 = a[i + j] - a[i + j + len];
-                if (f1 >= mod) f1 -= mod; if (f2 < 0) f2 += mod;
-                a[i + j] = f1, a[i + j + len] = f2;}}}}
-\end{minted}
 
 \fbox{$Gx = \{y \in X| \exists a \in G\colon a\star x = y\}$}
 \fbox{$G_x = \{a \in G\colon a\star x = x\}$}
