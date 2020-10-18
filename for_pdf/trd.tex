@@ -1621,6 +1621,9 @@ ll get_cnt_primes(ll n) { // # primes on [1, n], n <= 10^11, 10 queries, ~500ms
 \fbox{$|G|=|Gx|\cdot|G_x|$}
 \fbox{$X^a=\{x\in X\colon a\star x = x\}$}
 \fbox{$|X\textfractionsolidus G| = \frac 1 {|G|}\sum\limits_{a\in G}|X^a|$}
+\fbox{$\prod\limits_{k=1}^{\infty}(1-x^k)=\sum\limits_{q=-\infty}^{+\infty}(-1)^qx^{\frac{3q^2+q}{2}}$}
+
+\fbox{$\prod\limits_{k=1}^{\infty}\frac{1}{1-x^k}=\sum\limits_{n=0}^{+\infty}p(n)x^n\Rightarrow p(0)=1, p(n)=\sum\limits_{q=1}^{+\infty}(-1)^{q+1}\left[p\left(n-\frac{3q^2-q}{2}\right)+p\left(n-\frac{3q^2+q}{2}\right)\right]$}
 
 \begin{minted}[frame=single]{cpp}
 struct comparator {
