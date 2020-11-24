@@ -134,7 +134,7 @@ struct segment {
             return segment{SEGMENT, a - v * ld(inf), a + v * ld(inf)};
     }
 
-    bool intersects(const segment& o, bool swapped = false) const {
+    bool intersects(const segment& o, bool swapped = false) const { // works correctly ONLY for non colinear vectors
         ld vm1 = (b - a).vector_mul(o.a - a);
         ld vm2 = (b - a).vector_mul(o.b - a);
         if ((vm1 > eps && vm2 > eps) || (vm1 < -eps && vm2 < -eps))
