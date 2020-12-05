@@ -9,8 +9,8 @@ struct Dinic {
     vector< vector< int > > g;
     vector< int > dist, res, ptr;
 
-    Dinic(int _n, int _S, int _T):
-            n(_n), S(_S), T(_T)
+    Dinic(int n_, int S_, int T_):
+            n(n_), S(S_), T(T_)
     {
         g.resize(n);
     }
