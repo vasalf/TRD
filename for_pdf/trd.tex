@@ -1026,12 +1026,25 @@ ll euclid(ll nw_st, ll step, ll mod, ll bound) {return rec(nw_st, mod, 0, step, 
 \end{minted}
 
 \begin{minted}[frame=single]{c++}
-void fwht(ll* a, ll mod) { // any mod, len(a) = 2^LOG
-ll f1, f2; // c[i^j] += a[i] * b[j] => fwht(a), fwht(b), c = a * b, fwht(c)
-for (int len = 1; len < (1 << LOG); len <<= 1) {
-for (int i = 0; i < (1 << LOG); i += 2 * len) {
-for (int j = 0; j < len; j++) {f1 = a[i + j] + a[i + j + len], f2 = a[i + j] - a[i + j + len];
-if (f1 >= mod) f1 -= mod; if (f2 < 0) f2 += mod;a[i + j] = f1, a[i + j + len] = f2;}}}}
+// c[i^j] += a[i] * b[j] <=> xor_fwht(a), xor_fwht(b), c[i] = a[i] * b[i], xor_fwht(c)
+void xor_fwht(vector<int>& a, bool inverse = false) {
+for (int x, y, len = 1; len < (int) a.size(); len <<= 1) {
+for (int i = 0; i < (int) a.size(); i += len << 1) {
+for (int j = 0; j < len; j++) {x = a[i + j], y = a[i + j + len];
+a[i + j] = _sum(x, y), a[i + j + len] = _sub(x, y);}}}
+if (inverse) {int rn = _binpow((int) a.size(), mod - 2);for (int& x : a)x = _mul(x, rn);}}
+// c[i|j] += a[i] * b[j] <=> or_fwht(a), or_fwht(b), c[i] = a[i] * b[i], or_fwht(c)
+void or_fwht(vector<int>& a, bool inverse = false) {
+for (int x, y, len = 1; len < (int) a.size(); len <<= 1) {
+for (int i = 0; i < (int) a.size(); i += len << 1) {
+for (int j = 0; j < len; j++) {x = a[i + j], y = a[i + j + len];
+a[i + j] = x, a[i + j + len] = inverse ? _sub(y, x) : _sum(y, x);}}}}
+// c[i&j] += a[i] * b[j] <=> and_fwht(a), and_fwht(b), c[i] = a[i] * b[i], and_fwht(c)
+void and_fwht(vector<int>& a, bool inverse = false) {
+for (int x, y, len = 1; len < (int) a.size(); len <<= 1) {
+for (int i = 0; i < (int) a.size(); i += len << 1) {
+for (int j = 0; j < len; j++) {x = a[i + j], y = a[i + j + len];
+a[i + j] = inverse ? _sub(x, y) : _sum(x, y), a[i + j + len] = y;}}}}
 \end{minted}
 
 \begin{minted}[frame=single]{c++}
