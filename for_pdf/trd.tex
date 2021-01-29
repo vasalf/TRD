@@ -1204,6 +1204,27 @@ Response response;response.value = simplex.get_max_value();
 response.solution = simplex.get_solution();response.solution.resize(n);return response;}
 \end{minted}
 
+\begin{minted}[frame=single]{cpp}
+// O(n^2), init_lines — прямые, торчащие из точки в следующую
+ld halfplane_intersection(vector<point> init, vector<line> init_lines, vector<line> lines) {
+for (line l : lines) {
+int cnt = 0; for (point p : init) { if (l.a * p.x + l.b * p.y + l.c >= 0) { cnt++; }}
+if (cnt == 0) { return 0; } if (cnt == (int)init.size()) { continue; }
+for (int i = 1; i < (int)init.size(); i++) {
+if (l.a * init[i].x + l.b * init[i].y + l.c >= 0 && l.a * init[i - 1].x
++ l.b * init[i - 1].y + l.c < 0) {
+rotate(init.begin(), init.begin() + i, init.end()); rotate(init_lines.begin(), 
+init_lines.begin() + i, init_lines.end()); break; }}
+int j = 0; while (l.a * init[j].x + l.b * init[j].y + l.c >= 0) j++;
+point a = intersect(init_lines[j - 1], l); point b = intersect(l, init_lines.back());
+line last_line = init_lines.back(); init.erase(init.begin() + j, init.end());
+init_lines.erase(init_lines.begin() + j, init_lines.end());
+init.push_back(a); init.push_back(b); init_lines.push_back(l);
+init_lines.push_back(last_line); }
+ld sq = 0; forn(i, init.size()) { sq += cp(init[i], init[(i + 1) % init.size()]); }
+return fabsl(sq) / 2;}
+\end{minted}
+
 % \begin{minted}[frame=single]{cpp}
 % \end{minted}
 
@@ -1232,5 +1253,7 @@ response.solution = simplex.get_solution();response.solution.resize(n);return re
 \fbox{$M_1=(S,I_1)\cap M_2=(S,I_2). J. y\rightarrow z (J - y + z \in I_1). y\leftarrow z (J - y + z \in I_2)$}
 
 \fbox{$X_1=\{z\in S/J\colon J+z\in I_1\}.X_2=\{z\in S/J\colon J+z\in I_2\}.$ Находим {\bf кратчайший} путь из $X_1$ в $X_2$. Ксорим.}
+
+\fbox{$x = \frac{B_1C_2 - B_2C_1}{A_1B_2 - A_2B_1}$, $y = \frac{A_2C_1 - A_1C_2}{A_1B_2 - A_2B_1}$}
 
 \end{document}
