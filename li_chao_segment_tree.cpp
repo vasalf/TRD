@@ -1,134 +1,65 @@
-struct line {
-    ll k, b;
-
-    line():
-        k(inf64), b(inf64)
-    { }
-
-    line(ll _k, ll _b):
-        k(_k), b(_b)
-    { }
-
-    ll get(ll x) {
-        return k == inf64 ? inf64 : k * x + b;
-    }
-};
-
 struct LiChaoTree {
-
-    ll get_mid(ll lx, ll rx) {
-        ll mx = lx + rx;
-        return mx >= 0 ? mx / 2 : mx / 2 - 1;
-    }
+    int mn, mx;
 
     struct Node {
-        ll lx, rx;
-        line best;
-        Node* l;
-        Node* r;
-
-        Node():
-            lx(-inf), rx(+inf), best(), l(0), r(0)
-        { }
-
-        Node(ll _lx, ll _rx):
-            lx(_lx), rx(_rx), best(), l(0), r(0)
-        { }
-
-        ~Node() {
-            if(l) {
-                delete l;
-            }
-            if(r) {
-                delete r;
-            }
-        }
+        int l, r;
+        int lt, rt;
+        Line line;
     };
 
-    Node* get_left(Node* v) {
-        if(!v->l) {
-            v->l = new Node(v->lx, get_mid(v->lx, v->rx));
-        }
-        return v->l;
-    }
+    vector<Node> t;
 
-    Node* get_right(Node* v) {
-        if(!v->r) {
-            v->r = new Node(get_mid(v->lx, v->rx) + 1, v->rx);
-        }
-        return v->r;
-    }
+    LiChaoTree(int L, int R)
+        : mn(L), mx(R)
+    {}
 
-    Node* root;
-    vec< line > add_list;
-
-    LiChaoTree(): root(new Node())
-    { }
-
-    void update(Node* v, line add) {
-        ll mx = get_mid(v->lx, v->rx);
-        if(add.get(mx) < v->best.get(mx)) {
-            std::swap(v->best, add);
+    void add_line(Line l) {
+        if (t.empty()) {
+            t = {{mn, mx, -1, -1, l}};
         }
-        if(v->lx == v->rx) {
-            return;
-        }
-        if(add.get(mx) == v->best.get(mx)) {
-            if(add.get(v->lx) < v->best.get(v->lx)) {
-                update(get_left(v), add);
-            }else {
-                update(get_right(v), add);
+        int v = 0;
+        while (true) {
+            int mid = (t[v].l + t[v].r) / 2;
+            if (l.get_func(mid) > t[v].line.get_func(mid)) {
+                swap(l, t[v].line);
+                return;
             }
-        }else if(add.get(v->lx) < v->best.get(v->lx)) {
-            update(get_left(v), add);
-        }else {
-            update(get_right(v), add);
+            if (l.get_func(t[v].l) > t[v].line.get_func(t[v].l)) {
+                if (t[v].lt == -1) {
+                    t[v].lt = t.size();
+                    t.emplace_back(Node{t[v].l, mid, -1, -1, l});
+                    return;
+                }
+                v = t[v].lt;
+            } else if (l.get_func(t[v].r) > t[v].line.get_func(t[v].r)) {
+                if (t[v].rt == -1) {
+                    t[v].rt = t.size();
+                    t.emplace_back(Node{mid, t[v].r, -1, -1, l});
+                    return;
+                }
+                v = t[v].rt;
+            } else {
+                return;
+            }
         }
     }
 
-    void add_line(line add) {
-        add_list.push_back(add);
-        update(root, add);
-    }
-
-    ll query(Node* v, ll x) {
-        if(!v) return inf64;
-        ll res = v->best.get(x);
-        if(v->lx == v->rx) {
-            return res;
+    ll get_max(ll x) {
+        int v = 0;
+        ll ret = -inf64;
+        while (v != -1) {
+            ret = max(ret, t[v].line.get_func(x));
+            int mid = (t[v].l + t[v].r) / 2;
+            if (x < mid) {
+                v = t[v].lt;
+            } else {
+                v = t[v].rt;
+            }
         }
-        ll mx = get_mid(v->lx, v->rx);
-        if(x <= mx) {
-            res = min(res, query(v->l, x));
-        }else {
-            res = min(res, query(v->r, x));
-        }
-        return res;
+        return ret;
     }
 
-    ll query(ll x) {
-        return query(root, x);
-    }
-
-    ~LiChaoTree() {
-        delete root;
-    }
-
-    void swap(LiChaoTree& o) {
-        std::swap(root, o.root);
-        std::swap(add_list, o.add_list);
-    }
-
-    int size() const {
-        return (int)add_list.size();
+    bool empty() {
+        return t.empty();
     }
 };
-
-void merge(LiChaoTree& a, LiChaoTree& b) {
-    if(a.size() < b.size()) {
-        a.swap(b);
-    }
-    for(line l : b.add_list) {
-        a.add_line(l);
-    }
-}
