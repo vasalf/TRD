@@ -1,7 +1,6 @@
 // Pollard
 
 #include <bits/stdc++.h>
-#include "optimization.h"
 
 using namespace std;
 
@@ -16,8 +15,6 @@ ll const inf64 = 1ll * inf * inf;
 
 const ll MAXX = 1000;
 const int FERMA_ITER = 30;
-//const int POLLARD_PO_ITER = 10000;
-int POLLARD_PO_ITER;
 
 inline ll sqr(ll n) {
     return n * n;
@@ -112,23 +109,29 @@ inline ll _func(ll x, ll n) {
     return result + 1 < n ? result + 1 : 0;
 }
 
-void pollard_po(ll n) {
-    POLLARD_PO_ITER = 5 + 3 * pow(n, 0.25);
-    ll a, b, x, g;
-    while(1) {
-        a = next_rand() % n;
-        if(a < 0) a += n;
-        b = next_rand() % n;
-        if(b < 0) b += n;
-        for(int iter = 0;iter < POLLARD_PO_ITER;iter++) {
-            x = a >= b ? a - b : b - a;
-            g = gcd(x, n);
-            if(1 < g && g < n) {
-                cout << g << " " << n / g << "\n";
-                exit(0);
+ll diff(ll x, ll y, ll mod) {
+    if (x - y < 0) return x - y + mod;
+    else return x - y + mod;
+}
+
+ll pollard_po(ll n) {
+    const int POLLARD_PO_ITER = 5 + 3 * pow(n, 0.25);
+    const int MAGIC_LOG = 20;
+    while(true) {
+        ll x = next_rand() % n;
+        for (int i = 0; i < POLLARD_PO_ITER; i++) {
+            x = _mul(x, x, n) + 1;
+        }
+        ll y = _mul(x, x, n) + 1;
+        for (int i = 0; i < POLLARD_PO_ITER / MAGIC_LOG; i++) {
+            ll g = 1;
+            for (int j = 0; j < MAGIC_LOG; j++) {
+                g = _mul(g, diff(x, y, n), n);
+                y = _mul(y, y, n) + 1;
             }
-            a = _func(a, n);
-            b = _func(_func(b, n), n);
+            ll res = __gcd(g, n);
+            if (res != 1 && res != n)
+                return res;
         }
     }
 }
@@ -265,22 +268,30 @@ namespace FACTORIZE {
         return result + 1 < n ? result + 1 : 0;
     }
 
+
+    ll diff(ll x, ll y, ll mod) {
+        if (x - y < 0) return x - y + mod;
+        else return x - y + mod;
+    }
+
     ll pollard_po(ll n) {
-        POLLARD_PO_ITER = 5 + 3 * pow(n, 0.25);
-        ll a, b, x, g;
-        while(1) {
-            a = next_rand() % n;
-            if(a < 0) a += n;
-            b = next_rand() % n;
-            if(b < 0) b += n;
-            for(int iter = 0;iter < POLLARD_PO_ITER;iter++) {
-                x = a >= b ? a - b : b - a;
-                g = gcd(x, n);
-                if(1 < g && g < n) {
-                    return g;
+        const int POLLARD_PO_ITER = 5 + 3 * pow(n, 0.25);
+        const int MAGIC_LOG = 20;
+        while(true) {
+            ll x = next_rand() % n;
+            for (int i = 0; i < POLLARD_PO_ITER; i++) {
+                x = _mul(x, x, n) + 1;
+            }
+            ll y = _mul(x, x, n) + 1;
+            for (int i = 0; i < POLLARD_PO_ITER / MAGIC_LOG; i++) {
+                ll g = 1;
+                for (int j = 0; j < MAGIC_LOG; j++) {
+                    g = _mul(g, diff(x, y, n), n);
+                    y = _mul(y, y, n) + 1;
                 }
-                a = _func(a, n);
-                b = _func(_func(b, n), n);
+                ll res = __gcd(g, n);
+                if (res != 1 && res != n)
+                    return res;
             }
         }
     }
