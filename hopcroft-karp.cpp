@@ -1,7 +1,8 @@
-struct HopcroftCarp {
+struct HopcroftKarp {
     int n, m;
     vec< vec< int > > g;
     vec< int > pl, pr, dist;
+    vec< bool > vis;
 
     HopcroftCarp():
         n(0), m(0)
@@ -41,8 +42,10 @@ struct HopcroftCarp {
 
     bool dfs(int v) {
         if(v == n) return 1;
+        vis[v] = true;
         for(int to : g[v]) {
             if(dist[ pr[to] ] != dist[v] + 1) continue;
+            if(vis[pr[to]]) continue;
             if(!dfs(pr[to])) continue;
             pl[v] = to;
             pr[to] = v;
@@ -56,8 +59,10 @@ struct HopcroftCarp {
         pr.resize(m, n);
         int result = 0;
         while(bfs()) {
+            vis.assign(n + 1, false);
             for(int u = 0;u < n;u++) {
                 if(pl[u] < m) continue;
+                if(vis[u]) continue;
                 result += dfs(u);
             }
         }
