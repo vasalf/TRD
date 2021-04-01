@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+IndentWidth: 2
+Language: Cpp
+AllowShortBlocksOnASingleLine: Always
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLambdasOnASingleLine: true
+AllowShortLambdasOnASingleLine: true
+AlwaysBreakAfterReturnType: None
+ColumnLimit: 50
+ContinuationIndentWidth: 2
+PointerAlignment: Left
+UseTab: Never
