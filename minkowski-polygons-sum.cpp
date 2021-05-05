@@ -13,21 +13,6 @@ vector<pt> minkowski_polygons_sum(vector<pt> a,
          min_element(b.begin(), b.end(), cmp),
          b.end());
   pt q = a[0] + b[0];
-  auto get_polygon_sides =
-    [](const vector<pt>& a) -> vector<pt> {
-    vector<pt> sides;
-    for (int i = 0; i < (int)a.size(); i++) {
-      int j = (i + 1) % (int)a.size();
-      sides.push_back(a[j] - a[i]);
-    }
-    return sides;
-  };
-  vector<pt> dirs, a_sides = get_polygon_sides(a),
-                   b_sides = get_polygon_sides(b);
-  dirs.insert(dirs.end(), a_sides.begin(),
-              a_sides.end());
-  dirs.insert(dirs.end(), b_sides.begin(),
-              b_sides.end());
   int n = (int)a.size();
   int m = (int)b.size();
   vector<pt> result = {q};
