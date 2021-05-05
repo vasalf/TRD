@@ -3,11 +3,13 @@ pair<pt, pt> find_tangents_on_convex_polygon(const vector<pt>& P, pt q) {
     // P in counter-clockwise order
     // P.size >= 3
     // P is strictly convex
+    // return {leftmost visible, rightmost visible}
+    // be careful with corner cases
+    // (when two different points may be
+    // leftmost/rightmost visible)
     int n = (int) P.size();
     auto is_visible_edge = [&](int i) -> bool {
-        int j = (i + 1) % n;
-        ld x = (P[i] - q).vector_mul(P[j] - P[i]);
-        return x < -eps;
+        return (P[i] - q).vector_mul(P[(i + 1) % n] - P[i]) < -eps;
     };
     auto is_visible = [&](int i) -> bool {
         return is_visible_edge(i) || is_visible_edge((i - 1 + n) % n);
