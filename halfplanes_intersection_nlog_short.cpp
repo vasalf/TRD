@@ -48,7 +48,7 @@ pair<bool, pt> intersect_lines(const Line& L1,
   ld vm = L1.dir().vector_mul(L2.dir());
   if (abs(vm) < eps) return {false, pt{}};
   ld t = L2.dir().vector_mul(L1.a - L2.a) / vm;
-  return {true, L1.a + (L1.b - L1.a) * t};
+  return {true, L1.a + L1.dir() * t};
 }
 struct Response {
   enum TYPE { EMPTY, INF, FINITE };
