@@ -245,6 +245,14 @@ for each node $j$, s.t. $i < j, j \in S, p_j=p_i$ set $p_j = i$
 
 \fbox{Теорема Пика. $S = I + \frac B 2 - 1$, где $S$ -- площадь, $B$ -- \# на сторонах, $I$ -- \# строго внутри}
 
+\fbox{$s(0,0)=c(0,0)=1.s(n,k)=s(n-1,k-1)-(n-1)s(n-1,k).c(n,k)=c(n-1,k-1)+(n-1)c(n-1,k).$}
+
+\fbox{$\sum\limits_{k=0}^{n}c(n,k)x^k=x(x+1)(x+2)\cdot\ldots\cdot(x+n-1).\sum\limits_{k=0}^{n}s(n,k)x^k=x(x-1)(x-2)\cdot\ldots\cdot(x-n+1)$}
+
+\fbox{$c(n, k) = (-1)^{n-k}s(n,k)$}
+\fbox{$\sum\limits_{n=0}^{\infty}\sum\limits_{k=0}^{n}\frac{c(n,k)}{n!}x^ny^k = \exp\left(-y\log(1-x)\right)$}
+\fbox{$\sum\limits_{n=0}^{\infty}\sum\limits_{k=0}^{n}\frac{s(n,k)}{n!}x^ny^k = \exp\left(y\log(1+x)\right)$}
+
 %% ALGORIGHMS
 \begin{multicols}{2}
 % String Algorithms
