@@ -3,8 +3,8 @@ struct HopcroftKarp {
   vec<vec<int>> g;
   vec<int> pl, pr, dist;
   vec<bool> vis;
-  HopcroftCarp() : n(0), m(0) {}
-  HopcroftCarp(int _n, int _m) : n(_n), m(_m) {
+  HopcroftKarp() : n(0), m(0) {}
+  HopcroftKarp(int _n, int _m) : n(_n), m(_m) {
     g.resize(n);
   }
   void add_edge(int u, int v) {
