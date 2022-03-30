@@ -2,7 +2,7 @@ template <int LOG>
 struct FFT {
     vector<int> rev[LOG + 1];
     vector<base> G[LOG + 1];
-    void precalc() {
+    FFT() {
         int N = 1 << LOG;
         base root(cosl(2 * pi / N), sinl(2 * pi / N));
         base start = root;
