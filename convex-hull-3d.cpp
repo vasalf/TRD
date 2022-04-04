@@ -1,5 +1,5 @@
 const ld eps = 1e-9;
-struct plane;
+
 struct pt {
     ld x = 0;
     ld y = 0;
@@ -106,7 +106,7 @@ vector<plane> convex_hull_3d(vector<pt> a) {
     int n = (int) a.size();
     if (n == 0) return {};
     vector<plane> hull;
-    {
+    { // NB: initial corner cases
         for (int i = 1; i < n; i++) {
             if ((a[0] - a[i]).norm() >= eps) {
                 swap(a[i], a[1]);
@@ -149,31 +149,19 @@ vector<plane> convex_hull_3d(vector<pt> a) {
         }
     }
     auto in_hull = [&](const pt& q) -> bool {
-        for (const auto& w : hull) if (sign(w, q) <= -eps) return false;
+        for (const auto& w : hull)
+            if (sign(w, q) <= -eps) return false;
         return true;
     };
-    vector<vector<int>> last_see(a.size(), vector<int>(a.size())), last_not_see(a.size(), vector<int>(a.size()));
+    vector<vector<int>> last_see(n, vector<int>(n)), last_not_see(n, vector<int>(n));
     int timer = 10;
     auto add = [&](int nid) {
-        pt q = a[nid];
-        timer++;
+        pt q = a[nid]; timer++;
         for (const auto& w : hull) {
-            if (sign(w, q) <= -eps) {
-                // see
-                for (int i = 0; i < 3; i++) {
-                    int j = (i + 1) % 3;
-                    int id_i = w.ps[i];
-                    int id_j = w.ps[j];
-                    last_see[id_i][id_j] = last_see[id_j][id_i] = timer;
-                }
-            } else {
-                // not see
-                for (int i = 0; i < 3; i++) {
-                    int j = (i + 1) % 3;
-                    int id_i = w.ps[i];
-                    int id_j = w.ps[j];
-                    last_not_see[id_i][id_j] = last_not_see[id_j][id_i] = timer;
-                }
+            auto& ar = sign(w, q) <= -eps ? last_see : last_not_see;
+            for (int i = 0; i < 3; i++) {
+                int j = (i + 1) % 3, id_i = w.ps[i], id_j = w.ps[j];
+                ar[id_i][id_j] = ar[id_j][id_i] = timer;
             }
         }
         vector<plane> next_hull;
@@ -183,10 +171,7 @@ vector<plane> convex_hull_3d(vector<pt> a) {
                 int sz = (int) ar.size();
                 assert(sz == 3);
                 for (int i = 0; i < sz; i++) {
-                    int j = (i + 1) % sz;
-                    int id_i = ar[i];
-                    int id_j = ar[j];
-                    int id_k = ar[3 ^ i ^ j];
+                    int j = (i + 1) % sz, id_i = ar[i], id_j = ar[j], id_k = ar[3 ^ i ^ j];
                     if (last_see[id_i][id_j] == timer && last_not_see[id_i][id_j] == timer) {
                         plane add_plane = get_plane(q, a[id_i], a[id_j]);
                         add_plane.ps = {nid, id_i, id_j};
