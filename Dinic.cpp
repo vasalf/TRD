@@ -5,7 +5,7 @@ struct Dinic {
   int n, S, T;
   vector<Edge> es;
   vector<vector<int>> g;
-  vector<int> dist, res, ptr;
+  vector<int> dist, res, ptr, used;
   Dinic(int n_, int S_, int T_)
       : n(n_), S(S_), T(T_) {
     g.resize(n);
@@ -74,22 +74,22 @@ struct Dinic {
   bool go(int v, vector<int>& F,
           vector<int>& path) {
     if (v == T) return 1;
+    if (used[v]) return 0; used[v] = 1;
     for (int ps : g[v]) {
       if (F[ps] <= 0) continue;
       if (go(es[ps].to, F, path)) {
         path.push_back(ps);
-        return 1;
-      }
-    }
-    return 0;
-  }
+        return 1;}}
+    return 0;}
   vector<pair<int, vector<int>>> decomposition() {
     find_max_flow();
     vector<int> F((int)es.size()), path, add;
     vector<pair<int, vector<int>>> dcmp;
     for (int i = 0; i < (int)es.size(); i++)
       F[i] = es[i].fl;
+    used.assign(n, 0);
     while (go(S, F, path)) {
+      used.assign(n, 0);
       int mn = INT_MAX;
       for (int ps : path)
         mn = min(mn, F[ps]);
