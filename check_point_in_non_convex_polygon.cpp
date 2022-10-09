@@ -1,5 +1,4 @@
 bool check_point_in_polygon(vector<pt> P, pt q) {
-    ld sm = 0;
     int n = (int) P.size();
     for (int i = 0; i < n; i++) {
         if ((P[i] - q).norm() < eps) return true;
