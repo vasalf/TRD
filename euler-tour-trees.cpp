@@ -9,20 +9,12 @@ class EulerTourTrees {
   */
 private:
   struct Node {
-    Node* l;
-    Node* r;
-    Node* p;
-    int prior;
-    int cnt;
-    int rev;
-    Node()
-        : l(nullptr), r(nullptr), p(nullptr),
+    Node* l, * r, * p;
+    int prior, cnt, rev;
+    Node() : l(nullptr), r(nullptr), p(nullptr),
           prior(rnd()), cnt(1), rev(0) {}
     ~Node() {
-      delete l;
-      delete r;
-    }
-  };
+      delete l; delete r;}};
   void do_rev(Node* v) {
     if (v) v->rev ^= 1, swap(v->l, v->r);
   }
@@ -47,24 +39,19 @@ private:
   void merge(Node*& v, Node* l, Node* r) {
     if (!l || !r) {
       v = l ? l : r;
-      return;
-    }
-    push(l);
-    push(r);
+      return; }
+    push(l); push(r);
     if (l->prior < r->prior) {
-      merge(l->r, l->r, r);
-      v = l;
+      merge(l->r, l->r, r); v = l;
     } else {
-      merge(r->l, l, r->l);
-      v = r;
+      merge(r->l, l, r->l); v = r;
     }
     update(v);
   }
   void split_by_cnt(Node* v, Node*& l, Node*& r,
                     int x) {
     if (!v) {
-      l = r = nullptr;
-      return;
+      l = r = nullptr;  return;
     }
     push(v);
     if (get_cnt(v->l) + 1 <= x) {
@@ -122,33 +109,24 @@ public:
       ptr[u].empty() ? nullptr : *ptr[u].begin());
     Node* rv = get_root(
       ptr[v].empty() ? nullptr : *ptr[v].begin());
-    return ru && ru == rv;
-  }
+    return ru && ru == rv;}
   void link(int u, int v) {
     Node* ru = shift(
       ptr[u].empty() ? nullptr : *ptr[u].begin());
     Node* rv = shift(
       ptr[v].empty() ? nullptr : *ptr[v].begin());
-    Node* uv = new Node();
-    Node* vu = new Node();
-    ptr[u].insert(uv);
-    ptr[v].insert(vu);
-    where_edge[u][v] = uv;
-    where_edge[v][u] = vu;
-    merge(ru, ru, uv);
-    merge(ru, ru, rv);
-    merge(ru, ru, vu);
-  }
+    Node* uv = new Node(), * vu = new Node();
+    ptr[u].insert(uv); ptr[v].insert(vu);
+    where_edge[u][v] = uv; where_edge[v][u] = vu;
+    merge(ru, ru, uv); merge(ru, ru, rv);
+    merge(ru, ru, vu);}
   void cut(int u, int v) {
-    Node* uv = where_edge[u][v];
-    Node* vu = where_edge[v][u];
-    ptr[u].erase(uv);
-    ptr[v].erase(vu);
+    Node* uv = where_edge[u][v]б * vu = where_edge[v][u];
+    ptr[u].erase(uv); ptr[v].erase(vu);
     Node* root = shift(uv);
     Node *nl = nullptr, *nm = nullptr,
          *nr = nullptr;
-    int pos1 = get_pos(uv);
-    int pos2 = get_pos(vu);
+    int pos1 = get_pos(uv), pos2 = get_pos(vu);
     if (pos1 < pos2) {
       split_by_cnt(root, nl, nr, pos2);
       split_by_cnt(nl, nl, vu, pos2 - 1);
@@ -160,22 +138,15 @@ public:
       split_by_cnt(nl, nl, uv, pos1 - 1);
       split_by_cnt(nl, nl, nm, pos2);
       split_by_cnt(nl, nl, vu, pos2 - 1);
-      merge(nl, nl, nm);
-    }
-    delete uv;
-    delete vu;
-  }
+      merge(nl, nl, nm);}
+    delete uv;delete vu;}
   ~EulerTourTrees() {
     set<Node*> roots;
-    for (int i = 1; i <= n; i++) {
-      for (Node* v : ptr[i]) {
+    for (int i = 1; i <= n; i++)
+      for (Node* v : ptr[i])
         roots.insert(get_root(v));
-      }
-    }
-    for (Node* root : roots) {
-      delete root;
-    }
-  }
+    for (Node* root : roots)
+      delete root;}
 private:
   int n = 0;
   vec<set<Node*>> ptr;
